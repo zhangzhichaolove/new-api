@@ -43,6 +43,8 @@ export interface SystemConfig {
   footerHtml?: string
   demoSiteEnabled?: boolean
   displayTokenStatEnabled?: boolean
+  /** Admin enforced IP logging — personal "Record IP" preference is overridden */
+  forceRecordIpLogEnabled?: boolean
   currency: CurrencyConfig
 }
 

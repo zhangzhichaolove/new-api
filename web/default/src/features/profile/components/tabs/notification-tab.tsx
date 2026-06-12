@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { PasswordInput } from '@/components/password-input'
+import { useSystemConfig } from '@/hooks/use-system-config'
 import { updateUserSettings } from '../../api'
 import {
   DEFAULT_QUOTA_WARNING_THRESHOLD,
@@ -54,6 +55,7 @@ interface NotificationTabProps {
 export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
   const { t } = useTranslation()
   const isAdmin = (profile?.role ?? 0) >= ROLE.ADMIN
+  const { forceRecordIpLogEnabled } = useSystemConfig()
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<UserSettings>({
     notify_type: 'email',
@@ -370,13 +372,18 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
           <div className='space-y-0.5'>
             <Label htmlFor='recordIp'>{t('Record IP Address')}</Label>
             <p className='text-muted-foreground text-xs sm:text-sm'>
-              {t('Log IP address for usage and error logs')}
+              {forceRecordIpLogEnabled
+                ? t(
+                    'IP logging is enforced by the site administrator and cannot be turned off'
+                  )
+                : t('Log IP address for usage and error logs')}
             </p>
           </div>
           <Switch
             id='recordIp'
             className='shrink-0'
-            checked={settings.record_ip_log}
+            checked={forceRecordIpLogEnabled || settings.record_ip_log}
+            disabled={forceRecordIpLogEnabled}
             onCheckedChange={(checked) => updateField('record_ip_log', checked)}
           />
         </div>

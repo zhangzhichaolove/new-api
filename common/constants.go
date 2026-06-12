@@ -114,6 +114,9 @@ var MemoryCacheEnabled bool
 
 var LogConsumeEnabled = true
 
+// ForceRecordIpLogEnabled 强制为所有用户的消费/错误日志记录客户端 IP（忽略用户个人设置）
+var ForceRecordIpLogEnabled = false
+
 var TLSInsecureSkipVerify bool
 var InsecureTLSConfig = &tls.Config{InsecureSkipVerify: true}
 
