@@ -79,7 +79,7 @@ export function ModelMonitor() {
             </p>
             {isAdmin && (
               <p className="text-sm text-muted-foreground mt-2">
-                {t('Click "Manage Models" to add models to monitor')}
+                {t('Click [Manage Models] to add models to monitor')}
               </p>
             )}
           </div>
