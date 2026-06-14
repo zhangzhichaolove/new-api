@@ -53,6 +53,8 @@ const headerNavSchema = z.object({
   pricingRequireAuth: z.boolean(),
   rankingsEnabled: z.boolean(),
   rankingsRequireAuth: z.boolean(),
+  modelMonitorEnabled: z.boolean(),
+  modelMonitorRequireAuth: z.boolean(),
   docs: z.boolean(),
   about: z.boolean(),
 })
@@ -87,6 +89,14 @@ const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
     config.rankings?.requireAuth === undefined
       ? HEADER_NAV_DEFAULT.rankings.requireAuth
       : Boolean(config.rankings.requireAuth),
+  modelMonitorEnabled:
+    config.modelMonitor?.enabled === undefined
+      ? HEADER_NAV_DEFAULT.modelMonitor?.enabled ?? true
+      : Boolean(config.modelMonitor.enabled),
+  modelMonitorRequireAuth:
+    config.modelMonitor?.requireAuth === undefined
+      ? HEADER_NAV_DEFAULT.modelMonitor?.requireAuth ?? false
+      : Boolean(config.modelMonitor.requireAuth),
   docs:
     config.docs === undefined ? HEADER_NAV_DEFAULT.docs : Boolean(config.docs),
   about:
@@ -128,6 +138,11 @@ export function HeaderNavigationSection({
         ...(config.rankings ?? HEADER_NAV_DEFAULT.rankings),
         enabled: values.rankingsEnabled,
         requireAuth: values.rankingsRequireAuth,
+      },
+      modelMonitor: {
+        ...(config.modelMonitor ?? HEADER_NAV_DEFAULT.modelMonitor ?? { enabled: true, requireAuth: false }),
+        enabled: values.modelMonitorEnabled,
+        requireAuth: values.modelMonitorRequireAuth,
       },
     }
 
@@ -176,7 +191,7 @@ export function HeaderNavigationSection({
   const accessModules: Array<{
     enabledKey: keyof HeaderNavFormValues
     requireAuthKey: keyof HeaderNavFormValues
-    requireAuthDependsOn: 'pricingEnabled' | 'rankingsEnabled'
+    requireAuthDependsOn: 'pricingEnabled' | 'rankingsEnabled' | 'modelMonitorEnabled'
     title: string
     description: string
     requireAuthTitle: string
@@ -202,6 +217,17 @@ export function HeaderNavigationSection({
       requireAuthTitle: t('Require login to view rankings'),
       requireAuthDescription: t(
         'Visitors must authenticate before accessing the rankings page.'
+      ),
+    },
+    {
+      enabledKey: 'modelMonitorEnabled',
+      requireAuthKey: 'modelMonitorRequireAuth',
+      requireAuthDependsOn: 'modelMonitorEnabled',
+      title: t('Model Status Monitor'),
+      description: t('Real-time model health and uptime monitoring dashboard.'),
+      requireAuthTitle: t('Require login to view monitor'),
+      requireAuthDescription: t(
+        'Visitors must authenticate before accessing the model status monitor.'
       ),
     },
   ]

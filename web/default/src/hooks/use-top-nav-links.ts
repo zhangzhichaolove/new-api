@@ -85,6 +85,13 @@ export function useTopNavLinks(): TopNavLink[] {
     links.push({ title: t('Rankings'), href: '/rankings', requiresAuth })
   }
 
+  // Model Monitor
+  const modelMonitor = modules?.modelMonitor
+  if (modelMonitor && typeof modelMonitor === 'object' && modelMonitor.enabled) {
+    const requiresAuth = modelMonitor.requireAuth && !isAuthed
+    links.push({ title: t('Model Status Monitor'), href: '/model-monitor', requiresAuth })
+  }
+
   // Docs (supports external links)
   if (modules?.docs !== false) {
     if (docsLink) {

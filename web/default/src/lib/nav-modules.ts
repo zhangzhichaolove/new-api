@@ -20,16 +20,17 @@ import { getStatus } from '@/lib/api'
 
 export type ModuleAccess = { enabled: boolean; requireAuth: boolean }
 
-export type HeaderNavModule = 'rankings' | 'pricing'
+export type HeaderNavModule = 'rankings' | 'pricing' | 'modelMonitor'
 
 export type HeaderNavModules = {
   home: boolean
   console: boolean
   pricing: ModuleAccess
   rankings: ModuleAccess
+  modelMonitor?: ModuleAccess
   docs: boolean
   about: boolean
-  [key: string]: boolean | ModuleAccess
+  [key: string]: boolean | ModuleAccess | undefined
 }
 
 const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
@@ -37,6 +38,7 @@ const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
   console: true,
   pricing: { enabled: true, requireAuth: false },
   rankings: { enabled: true, requireAuth: false },
+  modelMonitor: { enabled: true, requireAuth: false },
   docs: true,
   about: true,
 }
@@ -44,6 +46,7 @@ const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
 const DEFAULTS: Record<HeaderNavModule, ModuleAccess> = {
   pricing: DEFAULT_HEADER_NAV_MODULES.pricing,
   rankings: DEFAULT_HEADER_NAV_MODULES.rankings,
+  modelMonitor: DEFAULT_HEADER_NAV_MODULES.modelMonitor!,
 }
 
 function cloneHeaderNavDefaults(): HeaderNavModules {
@@ -51,6 +54,9 @@ function cloneHeaderNavDefaults(): HeaderNavModules {
     ...DEFAULT_HEADER_NAV_MODULES,
     pricing: { ...DEFAULT_HEADER_NAV_MODULES.pricing },
     rankings: { ...DEFAULT_HEADER_NAV_MODULES.rankings },
+    modelMonitor: DEFAULT_HEADER_NAV_MODULES.modelMonitor
+      ? { ...DEFAULT_HEADER_NAV_MODULES.modelMonitor }
+      : undefined,
   }
 }
 
@@ -116,6 +122,13 @@ export function parseHeaderNavModules(raw: unknown): HeaderNavModules {
     }
     if (key === 'rankings') {
       result.rankings = parseAccess(value, result.rankings)
+      return
+    }
+    if (key === 'modelMonitor') {
+      result.modelMonitor = parseAccess(
+        value,
+        result.modelMonitor ?? { enabled: true, requireAuth: false }
+      )
       return
     }
 

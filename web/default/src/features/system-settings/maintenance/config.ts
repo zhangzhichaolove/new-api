@@ -26,6 +26,7 @@ export type HeaderNavModulesConfig = {
   console: boolean
   pricing: HeaderNavAccessConfig
   rankings: HeaderNavAccessConfig
+  modelMonitor?: HeaderNavAccessConfig
   docs: boolean
   about: boolean
   [key: string]: boolean | HeaderNavAccessConfig
@@ -46,6 +47,10 @@ export const HEADER_NAV_DEFAULT: HeaderNavModulesConfig = {
     requireAuth: false,
   },
   rankings: {
+    enabled: true,
+    requireAuth: false,
+  },
+  modelMonitor: {
     enabled: true,
     requireAuth: false,
   },
@@ -98,6 +103,9 @@ const cloneHeaderNavDefault = (): HeaderNavModulesConfig => ({
   ...HEADER_NAV_DEFAULT,
   pricing: { ...HEADER_NAV_DEFAULT.pricing },
   rankings: { ...HEADER_NAV_DEFAULT.rankings },
+  modelMonitor: HEADER_NAV_DEFAULT.modelMonitor
+    ? { ...HEADER_NAV_DEFAULT.modelMonitor }
+    : { enabled: true, requireAuth: false },
 })
 
 const parseAccessModule = (
@@ -146,6 +154,7 @@ export function parseHeaderNavModules(
       ...base,
       pricing: { ...base.pricing },
       rankings: { ...base.rankings },
+      modelMonitor: base.modelMonitor ? { ...base.modelMonitor } : undefined,
     }
 
     Object.entries(parsed).forEach(([key, raw]) => {
@@ -155,6 +164,13 @@ export function parseHeaderNavModules(
       }
       if (key === 'rankings') {
         result.rankings = parseAccessModule(raw, base.rankings)
+        return
+      }
+      if (key === 'modelMonitor') {
+        result.modelMonitor = parseAccessModule(
+          raw,
+          base.modelMonitor ?? { enabled: true, requireAuth: false }
+        )
         return
       }
 
