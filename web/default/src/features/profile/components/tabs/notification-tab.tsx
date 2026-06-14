@@ -28,6 +28,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
 import { PasswordInput } from '@/components/password-input'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { useAuthStore } from '@/stores/auth-store'
 import { updateUserSettings } from '../../api'
 import {
   DEFAULT_QUOTA_WARNING_THRESHOLD,
@@ -56,6 +57,7 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
   const { t } = useTranslation()
   const isAdmin = (profile?.role ?? 0) >= ROLE.ADMIN
   const { forceRecordIpLogEnabled } = useSystemConfig()
+  const { auth } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [settings, setSettings] = useState<UserSettings>({
     notify_type: 'email',
@@ -109,6 +111,19 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
       const response = await updateUserSettings(settings)
 
       if (response.success) {
+        // Keep the global auth store in sync so settings that affect other
+        // views (e.g. the IP column in usage logs) take effect immediately
+        // without requiring a page reload.
+        if (auth.user) {
+          const existingSetting =
+            typeof auth.user.setting === 'string'
+              ? parseUserSettings(auth.user.setting)
+              : (auth.user.setting ?? {})
+          auth.setUser({
+            ...auth.user,
+            setting: JSON.stringify({ ...existingSetting, ...settings }),
+          })
+        }
         toast.success(t('Settings updated successfully'))
         onUpdate()
       } else {
