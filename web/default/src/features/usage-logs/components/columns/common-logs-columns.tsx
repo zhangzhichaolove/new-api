@@ -36,6 +36,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { StatusBadge, type StatusBadgeProps } from '@/components/status-badge'
+import { useSystemConfig } from '@/hooks/use-system-config'
+import { useAuthStore } from '@/stores/auth-store'
+import { parseUserSettings } from '@/features/profile/lib'
 import { LOG_TYPE_ALL_VALUE } from '../../constants'
 import type { UsageLog } from '../../data/schema'
 import {
@@ -269,6 +272,16 @@ function buildDetailSegments(
 
 export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
   const { t } = useTranslation()
+  const { forceRecordIpLogEnabled } = useSystemConfig()
+  const userSetting = useAuthStore((state) => state.auth.user?.setting)
+  // Show the IP column only when IP logging is enabled — either enforced
+  // globally by the site admin, or opted in via the current user's setting.
+  const userSettingObj =
+    typeof userSetting === 'string'
+      ? parseUserSettings(userSetting)
+      : userSetting
+  const recordIpEnabled =
+    Boolean(forceRecordIpLogEnabled) || Boolean(userSettingObj?.record_ip_log)
   const columns: ColumnDef<UsageLog>[] = [
     {
       accessorKey: 'created_at',
@@ -518,6 +531,32 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
     },
     size: 160,
   })
+
+  const ipColumn: ColumnDef<UsageLog> = {
+    accessorKey: 'ip',
+    header: t('IP'),
+    cell: ({ row }) => {
+      const log = row.original
+      // Mirror the classic frontend: surface IP for consume (2) and error (5)
+      // logs, plus top-up (1) logs for admins (caller IP). Other log types do
+      // not carry a meaningful client IP.
+      const canShowIp =
+        log.type === 2 || log.type === 5 || (isAdmin && log.type === 1)
+      if (!canShowIp || !log.ip) return null
+      return (
+        <StatusBadge
+          label={log.ip}
+          variant='neutral'
+          size='sm'
+          showDot={false}
+          copyText={log.ip}
+          className='font-mono'
+        />
+      )
+    },
+    size: 140,
+  }
+
   columns.push(
     {
       accessorKey: 'model_name',
@@ -746,6 +785,8 @@ export function useCommonLogsColumns(isAdmin: boolean): ColumnDef<UsageLog>[] {
         )
       },
     },
+
+    ...(recordIpEnabled ? [ipColumn] : []),
 
     {
       accessorKey: 'content',

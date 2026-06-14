@@ -227,6 +227,7 @@ function CommonLogsCard<TData>({
           cell={cells.get('prompt_tokens')}
           primaryOnly
         />
+        <SummaryField label={t('IP')} cell={cells.get('ip')} />
         <SummaryField
           label={t('Details')}
           cell={cells.get('content')}
