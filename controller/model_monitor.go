@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -235,6 +236,9 @@ func GetMonitoredModels(c *gin.Context) {
 }
 
 // GetAvailableModels 获取可选模型列表（管理员）
+// 数据来源：
+// 1. 从 abilities 表查询 enabled = true 且 models.status = 1 的模型（与 /api/pricing 一致）
+// 2. 始终包含已监控的模型（即使它们已被删除或禁用），以便管理员可以移除过期的监控项
 func GetAvailableModels(c *gin.Context) {
 	keyword := c.Query("keyword")
 
@@ -249,24 +253,33 @@ func GetAvailableModels(c *gin.Context) {
 	}
 
 	monitoredMap := make(map[string]bool)
+	modelNamesSet := make(map[string]bool)
+
+	// 先添加所有已监控的模型（无论它们是否还存在）
 	for _, monitor := range monitors {
 		monitoredMap[monitor.ModelName] = true
+		// 如果有关键词筛选，检查是否匹配
+		if keyword == "" || strings.Contains(strings.ToLower(monitor.ModelName), strings.ToLower(keyword)) {
+			modelNamesSet[monitor.ModelName] = true
+		}
 	}
 
-	// 使用 DashboardListModels 的相同逻辑：从 abilities 表获取所有唯一的模型名称
-	// 这与模型广场使用的数据源一致
-	var modelNames []string
+	// 查询当前可用的模型（与 /api/pricing 接口保持一致）
+	var availableModelNames []string
 	query := model.DB.Table("abilities").
-		Select("DISTINCT model").
-		Where("model != ''")
+		Select("DISTINCT abilities.model").
+		Joins("LEFT JOIN models ON abilities.model = models.model_name").
+		Where("abilities.enabled = ?", true).
+		Where("abilities.model != ''").
+		Where("(models.model_name IS NULL OR models.status = ?)", 1)
 
 	if keyword != "" {
-		query = query.Where("model LIKE ?", "%"+keyword+"%")
+		query = query.Where("abilities.model LIKE ?", "%"+keyword+"%")
 	}
 
-	query = query.Order("model ASC").Limit(100)
+	query = query.Order("abilities.model ASC")
 
-	err = query.Pluck("model", &modelNames).Error
+	err = query.Pluck("abilities.model", &availableModelNames).Error
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -275,6 +288,19 @@ func GetAvailableModels(c *gin.Context) {
 		return
 	}
 
+	// 合并可用模型到集合中
+	for _, name := range availableModelNames {
+		modelNamesSet[name] = true
+	}
+
+	// 转换为切片并排序
+	modelNames := make([]string, 0, len(modelNamesSet))
+	for name := range modelNamesSet {
+		modelNames = append(modelNames, name)
+	}
+	sort.Strings(modelNames)
+
+	// 构建返回结果
 	availableModels := make([]AvailableModel, 0, len(modelNames))
 	for _, name := range modelNames {
 		availableModels = append(availableModels, AvailableModel{

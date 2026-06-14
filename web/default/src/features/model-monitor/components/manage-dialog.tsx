@@ -82,7 +82,7 @@ export function ManageDialog({ open, onOpenChange }: ManageDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl overflow-hidden">
         <DialogHeader>
           <DialogTitle>{t('Manage Monitored Models')}</DialogTitle>
           <DialogDescription>
@@ -90,7 +90,7 @@ export function ManageDialog({ open, onOpenChange }: ManageDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-hidden">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -101,29 +101,45 @@ export function ManageDialog({ open, onOpenChange }: ManageDialogProps) {
             />
           </div>
 
-          <ScrollArea className="h-[400px] pr-4">
+          <div className="h-[400px] overflow-y-auto overflow-x-hidden no-scrollbar">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">
                 {t('Loading...')}
               </div>
             ) : models && models.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-x-hidden">
                 {models.map((model) => (
                   <div
                     key={model.model_name}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent"
+                    className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent overflow-hidden"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div
+                        className="font-medium text-sm"
+                        title={model.model_name}
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {model.model_name}
                       </div>
                       {model.description && (
-                        <div className="text-sm text-muted-foreground truncate">
+                        <div
+                          className="text-xs text-muted-foreground"
+                          title={model.description}
+                          style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {model.description}
                         </div>
                       )}
                     </div>
-                    <div className="ml-4">
+                    <div className="flex-shrink-0">
                       {model.is_monitored ? (
                         <Button
                           size="sm"
@@ -151,7 +167,7 @@ export function ManageDialog({ open, onOpenChange }: ManageDialogProps) {
                 {t('No models found')}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
