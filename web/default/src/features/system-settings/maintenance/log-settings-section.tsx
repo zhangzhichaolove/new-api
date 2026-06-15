@@ -57,6 +57,7 @@ import { useUpdateOption } from '../hooks/use-update-option'
 
 const logSettingsSchema = z.object({
   LogConsumeEnabled: z.boolean(),
+  ErrorLogEnabled: z.boolean(),
   ForceRecordIpLogEnabled: z.boolean(),
 })
 
@@ -64,6 +65,7 @@ type LogSettingsFormValues = z.infer<typeof logSettingsSchema>
 
 type LogSettingsSectionProps = {
   defaultEnabled: boolean
+  defaultErrorLogEnabled: boolean
   defaultForceRecordIpEnabled: boolean
 }
 
@@ -94,6 +96,7 @@ const quickSelectOptions = [
 
 export function LogSettingsSection({
   defaultEnabled,
+  defaultErrorLogEnabled,
   defaultForceRecordIpEnabled,
 }: LogSettingsSectionProps) {
   const { t } = useTranslation()
@@ -102,6 +105,7 @@ export function LogSettingsSection({
     resolver: zodResolver(logSettingsSchema),
     defaultValues: {
       LogConsumeEnabled: defaultEnabled,
+      ErrorLogEnabled: defaultErrorLogEnabled,
       ForceRecordIpLogEnabled: defaultForceRecordIpEnabled,
     },
   })
@@ -115,9 +119,10 @@ export function LogSettingsSection({
   useEffect(() => {
     form.reset({
       LogConsumeEnabled: defaultEnabled,
+      ErrorLogEnabled: defaultErrorLogEnabled,
       ForceRecordIpLogEnabled: defaultForceRecordIpEnabled,
     })
-  }, [defaultEnabled, defaultForceRecordIpEnabled, form])
+  }, [defaultEnabled, defaultErrorLogEnabled, defaultForceRecordIpEnabled, form])
 
   const purgeTimestamp = useMemo(() => {
     if (!purgeDate) return null
@@ -134,6 +139,12 @@ export function LogSettingsSection({
       await updateOption.mutateAsync({
         key: 'LogConsumeEnabled',
         value: values.LogConsumeEnabled,
+      })
+    }
+    if (values.ErrorLogEnabled !== defaultErrorLogEnabled) {
+      await updateOption.mutateAsync({
+        key: 'ErrorLogEnabled',
+        value: values.ErrorLogEnabled,
       })
     }
     if (values.ForceRecordIpLogEnabled !== defaultForceRecordIpEnabled) {
@@ -199,6 +210,30 @@ export function LogSettingsSection({
                   <FormDescription>
                     {t(
                       'Track per-request consumption to power usage analytics. Keeping this on increases database writes.'
+                    )}
+                  </FormDescription>
+                </SettingsSwitchContent>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </SettingsSwitchItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='ErrorLogEnabled'
+            render={({ field }) => (
+              <SettingsSwitchItem>
+                <SettingsSwitchContent>
+                  <FormLabel>{t('Record failed model requests')}</FormLabel>
+                  <FormDescription>
+                    {t(
+                      'Store upstream model request failures in the logs table so administrators can review them from usage logs.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>
