@@ -122,6 +122,70 @@ func Query(params QueryParams) (QueryResult, error) {
 	return buildQueryResult(params.Model, merged), nil
 }
 
+func QueryModelRawBuckets(modelName string, hours int) (map[int64]BucketCounters, error) {
+	if hours <= 0 {
+		hours = 24
+	}
+	if hours > 24*30 {
+		hours = 24 * 30
+	}
+	endTs := time.Now().Unix()
+	startTs := endTs - int64(hours)*3600
+
+	merged := map[bucketKey]counters{}
+
+	// 从数据库查询
+	rows, err := model.GetPerfMetrics(modelName, "", startTs, endTs)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		mergeCounters(merged, bucketKey{
+			model:    row.ModelName,
+			group:    row.Group,
+			bucketTs: row.BucketTs,
+		}, counters{
+			requestCount:   row.RequestCount,
+			successCount:   row.SuccessCount,
+			totalLatencyMs: row.TotalLatencyMs,
+			ttftSumMs:      row.TtftSumMs,
+			ttftCount:      row.TtftCount,
+			outputTokens:   row.OutputTokens,
+			generationMs:   row.GenerationMs,
+		})
+	}
+
+	// 合并内存中的热数据
+	hotBuckets.Range(func(key, value any) bool {
+		k := key.(bucketKey)
+		if k.model != modelName || k.bucketTs < startTs || k.bucketTs > endTs {
+			return true
+		}
+		mergeCounters(merged, k, value.(*atomicBucket).snapshot())
+		return true
+	})
+
+	// 按时间戳聚合所有 group 的数据，并转换为导出类型
+	result := make(map[int64]BucketCounters)
+	for key, value := range merged {
+		if value.requestCount == 0 {
+			continue
+		}
+		cur := result[key.bucketTs]
+		cur.RequestCount += value.requestCount
+		cur.SuccessCount += value.successCount
+		cur.TotalLatencyMs += value.totalLatencyMs
+		cur.TtftSumMs += value.ttftSumMs
+		cur.TtftCount += value.ttftCount
+		cur.OutputTokens += value.outputTokens
+		cur.GenerationMs += value.generationMs
+		result[key.bucketTs] = cur
+	}
+
+	return result, nil
+}
+
 func QuerySummaryAll(hours int, groups []string) (SummaryAllResult, error) {
 	if hours <= 0 {
 		hours = 24

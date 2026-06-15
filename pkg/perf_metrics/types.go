@@ -32,6 +32,17 @@ type BucketPoint struct {
 	AvgTps       float64 `json:"avg_tps"`
 }
 
+// BucketCounters 用于暴露给外部的bucket原始计数（导出字段）
+type BucketCounters struct {
+	RequestCount   int64
+	SuccessCount   int64
+	TotalLatencyMs int64
+	TtftSumMs      int64
+	TtftCount      int64
+	OutputTokens   int64
+	GenerationMs   int64
+}
+
 type GroupResult struct {
 	Group        string        `json:"group"`
 	AvgTtftMs    int64         `json:"avg_ttft_ms"`

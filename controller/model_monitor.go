@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/model"
+	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/gin-gonic/gin"
 )
 
@@ -68,72 +69,61 @@ func calculateStatus(successRate float64, hasData bool) string {
 }
 
 func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats, error) {
-	now := time.Now()
-	startTime := now.Add(-time.Duration(windowHours) * time.Hour)
-	slotDuration := int64(windowHours * 3600 / 48) // 每个时段的秒数
+	// 使用 perf_metrics 系统查询数据（更准确的成功率统计）
+	// 不再使用 logs 表的 LogTypeConsume/LogTypeError，因为那些代表"扣费"而非"请求成功"
 
-	// 查询该模型在时间窗口内的所有日志，按时间段和类型分组
-	type LogCount struct {
-		TimeSlot int64 `gorm:"column:time_slot"`
-		Type     int   `gorm:"column:type"`
-		Count    int64 `gorm:"column:count"`
-	}
-
-	var counts []LogCount
-	err := model.LOG_DB.Model(&model.Log{}).
-		Select("(created_at / ?) * ? as time_slot, type, COUNT(*) as count", slotDuration, slotDuration).
-		Where("model_name = ?", modelName).
-		Where("created_at >= ?", startTime.Unix()).
-		Where("type IN ?", []int{model.LogTypeConsume, model.LogTypeError}).
-		Group("time_slot, type").
-		Scan(&counts).Error
-
+	// 查询原始 bucket 数据（自动合并数据库和内存中的热数据）
+	buckets, err := perfmetrics.QueryModelRawBuckets(modelName, windowHours)
 	if err != nil {
 		return nil, err
 	}
 
-	// 构建时间段映射
-	slotMap := make(map[int64]map[int]int64)
-	for _, count := range counts {
-		if slotMap[count.TimeSlot] == nil {
-			slotMap[count.TimeSlot] = make(map[int]int64)
-		}
-		slotMap[count.TimeSlot][count.Type] = count.Count
-	}
-
-	// 生成48个时间段 - 从当前时间向前倒推
-	timeline := make([]TimeSlotStats, 48)
-	var totalSuccess int64 = 0
-	var totalError int64 = 0
-
-	// 计算窗口结束时间对齐的时间段
+	now := time.Now()
+	slotDuration := int64(windowHours * 3600 / 48) // 每个时段的秒数
 	nowSlot := (now.Unix() / slotDuration) * slotDuration
 
+	// 按时间段聚合（将 perf_metrics 的细粒度 bucket 聚合到48个时间段）
+	type slotData struct {
+		requestCount int64
+		successCount int64
+	}
+	slotMap := make(map[int64]*slotData)
+
+	var totalRequests int64 = 0
+	var totalSuccess int64 = 0
+
+	for bucketTs, counters := range buckets {
+		// 将 bucket_ts 映射到48时间段中的某一段
+		slotKey := (bucketTs / slotDuration) * slotDuration
+		if slotMap[slotKey] == nil {
+			slotMap[slotKey] = &slotData{}
+		}
+		slotMap[slotKey].requestCount += counters.RequestCount
+		slotMap[slotKey].successCount += counters.SuccessCount
+
+		totalRequests += counters.RequestCount
+		totalSuccess += counters.SuccessCount
+	}
+
+	// 生成48个时间段的时间线
+	timeline := make([]TimeSlotStats, 48)
+
 	for i := 0; i < 48; i++ {
-		// 从最新时间段向前倒推：slot[0]是最旧的，slot[47]是最新的
 		slotKey := nowSlot - int64(47-i)*slotDuration
 		slotStart := time.Unix(slotKey, 0)
 		slotEnd := slotStart.Add(time.Duration(slotDuration) * time.Second)
 
-		successCount := int64(0)
-		errorCount := int64(0)
-
-		if typeMap, exists := slotMap[slotKey]; exists {
-			successCount = typeMap[model.LogTypeConsume]
-			errorCount = typeMap[model.LogTypeError]
-		}
-
-		totalSuccess += successCount
-		totalError += errorCount
-
-		totalReq := successCount + errorCount
 		var successRate float64 = 0
-		hasData := totalReq > 0
+		var totalReq int64 = 0
 
-		if hasData {
-			successRate = float64(successCount) / float64(totalReq) * 100
+		if data, exists := slotMap[slotKey]; exists {
+			totalReq = data.requestCount
+			if totalReq > 0 {
+				successRate = float64(data.successCount) / float64(totalReq) * 100
+			}
 		}
 
+		hasData := totalReq > 0
 		timeline[i] = TimeSlotStats{
 			StartTime:     slotStart.Unix(),
 			EndTime:       slotEnd.Unix(),
@@ -144,21 +134,20 @@ func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats,
 	}
 
 	// 计算整体统计
-	totalReq := totalSuccess + totalError
 	var overallSuccessRate float64 = 0
-	hasData := totalReq > 0
+	hasData := totalRequests > 0
 
 	if hasData {
-		overallSuccessRate = float64(totalSuccess) / float64(totalReq) * 100
+		overallSuccessRate = float64(totalSuccess) / float64(totalRequests) * 100
 	}
 
 	return &ModelMonitorStats{
 		ModelName:     modelName,
 		Status:        calculateStatus(overallSuccessRate, hasData),
 		SuccessRate:   overallSuccessRate,
-		TotalRequests: int(totalReq),
+		TotalRequests: int(totalRequests),
 		SuccessCount:  int(totalSuccess),
-		ErrorCount:    int(totalError),
+		ErrorCount:    int(totalRequests - totalSuccess),
 		Timeline:      timeline,
 	}, nil
 }
