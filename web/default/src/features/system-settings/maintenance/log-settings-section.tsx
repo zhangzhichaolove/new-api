@@ -58,6 +58,7 @@ import { useUpdateOption } from '../hooks/use-update-option'
 const logSettingsSchema = z.object({
   LogConsumeEnabled: z.boolean(),
   ErrorLogEnabled: z.boolean(),
+  ErrorLogAdminOnlyEnabled: z.boolean(),
   ForceRecordIpLogEnabled: z.boolean(),
 })
 
@@ -66,6 +67,7 @@ type LogSettingsFormValues = z.infer<typeof logSettingsSchema>
 type LogSettingsSectionProps = {
   defaultEnabled: boolean
   defaultErrorLogEnabled: boolean
+  defaultErrorLogAdminOnlyEnabled: boolean
   defaultForceRecordIpEnabled: boolean
 }
 
@@ -97,6 +99,7 @@ const quickSelectOptions = [
 export function LogSettingsSection({
   defaultEnabled,
   defaultErrorLogEnabled,
+  defaultErrorLogAdminOnlyEnabled,
   defaultForceRecordIpEnabled,
 }: LogSettingsSectionProps) {
   const { t } = useTranslation()
@@ -106,6 +109,7 @@ export function LogSettingsSection({
     defaultValues: {
       LogConsumeEnabled: defaultEnabled,
       ErrorLogEnabled: defaultErrorLogEnabled,
+      ErrorLogAdminOnlyEnabled: defaultErrorLogAdminOnlyEnabled,
       ForceRecordIpLogEnabled: defaultForceRecordIpEnabled,
     },
   })
@@ -116,13 +120,23 @@ export function LogSettingsSection({
   const [isCleaning, setIsCleaning] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
+  // Watch ErrorLogEnabled to control ErrorLogAdminOnlyEnabled visibility
+  const errorLogEnabled = form.watch('ErrorLogEnabled')
+
   useEffect(() => {
     form.reset({
       LogConsumeEnabled: defaultEnabled,
       ErrorLogEnabled: defaultErrorLogEnabled,
+      ErrorLogAdminOnlyEnabled: defaultErrorLogAdminOnlyEnabled,
       ForceRecordIpLogEnabled: defaultForceRecordIpEnabled,
     })
-  }, [defaultEnabled, defaultErrorLogEnabled, defaultForceRecordIpEnabled, form])
+  }, [
+    defaultEnabled,
+    defaultErrorLogEnabled,
+    defaultErrorLogAdminOnlyEnabled,
+    defaultForceRecordIpEnabled,
+    form,
+  ])
 
   const purgeTimestamp = useMemo(() => {
     if (!purgeDate) return null
@@ -145,6 +159,12 @@ export function LogSettingsSection({
       await updateOption.mutateAsync({
         key: 'ErrorLogEnabled',
         value: values.ErrorLogEnabled,
+      })
+    }
+    if (values.ErrorLogAdminOnlyEnabled !== defaultErrorLogAdminOnlyEnabled) {
+      await updateOption.mutateAsync({
+        key: 'ErrorLogAdminOnlyEnabled',
+        value: values.ErrorLogAdminOnlyEnabled,
       })
     }
     if (values.ForceRecordIpLogEnabled !== defaultForceRecordIpEnabled) {
@@ -230,10 +250,10 @@ export function LogSettingsSection({
             render={({ field }) => (
               <SettingsSwitchItem>
                 <SettingsSwitchContent>
-                  <FormLabel>{t('Record failed model requests')}</FormLabel>
+                  <FormLabel>{t('Record error logs')}</FormLabel>
                   <FormDescription>
                     {t(
-                      'Store upstream model request failures in the logs table so administrators can review them from usage logs.'
+                      'Store error records in the logs table so administrators can review them from usage logs.'
                     )}
                   </FormDescription>
                 </SettingsSwitchContent>
@@ -247,6 +267,34 @@ export function LogSettingsSection({
               </SettingsSwitchItem>
             )}
           />
+
+          {errorLogEnabled && (
+            <FormField
+              control={form.control}
+              name='ErrorLogAdminOnlyEnabled'
+              render={({ field }) => (
+                <SettingsSwitchItem>
+                  <SettingsSwitchContent>
+                    <FormLabel>
+                      {t('Admin-only access to error logs')}
+                    </FormLabel>
+                    <FormDescription>
+                      {t(
+                        'When enabled, regular users cannot view error logs in their usage logs. Only administrators can see these error entries.'
+                      )}
+                    </FormDescription>
+                  </SettingsSwitchContent>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </SettingsSwitchItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}

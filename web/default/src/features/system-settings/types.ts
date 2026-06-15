@@ -295,6 +295,7 @@ export type OperationsSettings = {
   WorkerAllowHttpImageRequestEnabled: boolean
   LogConsumeEnabled: boolean
   ErrorLogEnabled: boolean
+  ErrorLogAdminOnlyEnabled: boolean
   ForceRecordIpLogEnabled: boolean
   'performance_setting.disk_cache_enabled': boolean
   'performance_setting.disk_cache_threshold_mb': number

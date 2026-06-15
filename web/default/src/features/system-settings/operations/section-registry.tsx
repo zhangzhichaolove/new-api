@@ -101,6 +101,9 @@ const OPERATIONS_SECTIONS = [
       <LogSettingsSection
         defaultEnabled={Boolean(settings.LogConsumeEnabled)}
         defaultErrorLogEnabled={Boolean(settings.ErrorLogEnabled)}
+        defaultErrorLogAdminOnlyEnabled={Boolean(
+          settings.ErrorLogAdminOnlyEnabled
+        )}
         defaultForceRecordIpEnabled={Boolean(settings.ForceRecordIpLogEnabled)}
       />
     ),

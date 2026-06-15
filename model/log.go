@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/types"
 
@@ -483,7 +484,15 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	var tx *gorm.DB
 	if logType == LogTypeUnknown {
 		tx = LOG_DB.Where("logs.user_id = ?", userId)
+		// 如果启用了错误日志仅管理员可见，且用户不是管理员，则排除错误日志
+		if constant.ErrorLogAdminOnlyEnabled && !IsAdmin(userId) {
+			tx = tx.Where("logs.type != ?", LogTypeError)
+		}
 	} else {
+		// 如果请求的是错误日志，但启用了仅管理员可见且用户不是管理员，则直接返回空
+		if logType == LogTypeError && constant.ErrorLogAdminOnlyEnabled && !IsAdmin(userId) {
+			return []*Log{}, 0, nil
+		}
 		tx = LOG_DB.Where("logs.user_id = ? and logs.type = ?", userId, logType)
 	}
 
