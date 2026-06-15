@@ -37,6 +37,7 @@ const defaultSiteSettings: SiteSettings = {
   'legal.privacy_policy': '',
   HeaderNavModules: '',
   SidebarModulesAdmin: '',
+  'monitor_setting.monitor_success_only': false,
 }
 
 export function SiteSettings() {

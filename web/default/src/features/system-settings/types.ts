@@ -69,6 +69,7 @@ export type SiteSettings = {
   'legal.privacy_policy': string
   HeaderNavModules: string
   SidebarModulesAdmin: string
+  'monitor_setting.monitor_success_only'?: boolean
 }
 
 export type AuthSettings = {

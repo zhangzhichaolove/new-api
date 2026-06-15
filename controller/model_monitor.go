@@ -9,6 +9,7 @@ import (
 
 	"github.com/QuantumNous/new-api/model"
 	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -60,9 +61,9 @@ func calculateStatus(successRate float64, hasData bool) string {
 	if !hasData {
 		return "no_data"
 	}
-	if successRate >= 95 {
+	if successRate >= 90 {
 		return "healthy"
-	} else if successRate >= 80 {
+	} else if successRate >= 50 {
 		return "degraded"
 	}
 	return "error"
@@ -77,6 +78,10 @@ func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats,
 	if err != nil {
 		return nil, err
 	}
+
+	// 获取监控配置
+	monitorSetting := operation_setting.GetMonitorSetting()
+	successOnly := monitorSetting.MonitorSuccessOnly
 
 	now := time.Now()
 	slotDuration := int64(windowHours * 3600 / 48) // 每个时段的秒数
@@ -98,11 +103,19 @@ func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats,
 		if slotMap[slotKey] == nil {
 			slotMap[slotKey] = &slotData{}
 		}
-		slotMap[slotKey].requestCount += counters.RequestCount
-		slotMap[slotKey].successCount += counters.SuccessCount
 
-		totalRequests += counters.RequestCount
-		totalSuccess += counters.SuccessCount
+		// 如果开启"仅统计成功状态"，则只统计成功的请求
+		if successOnly {
+			slotMap[slotKey].requestCount += counters.SuccessCount
+			slotMap[slotKey].successCount += counters.SuccessCount
+			totalRequests += counters.SuccessCount
+			totalSuccess += counters.SuccessCount
+		} else {
+			slotMap[slotKey].requestCount += counters.RequestCount
+			slotMap[slotKey].successCount += counters.SuccessCount
+			totalRequests += counters.RequestCount
+			totalSuccess += counters.SuccessCount
+		}
 	}
 
 	// 生成48个时间段的时间线

@@ -24,9 +24,9 @@ export function StatusLegend() {
   const { t } = useTranslation()
 
   const items = [
-    { color: 'bg-green-500', label: t('Healthy (>95%)') },
-    { color: 'bg-orange-500', label: t('Degraded (80-95%)') },
-    { color: 'bg-red-500', label: t('Error (<80%)') },
+    { color: 'bg-green-500', label: t('Healthy (>90%)') },
+    { color: 'bg-orange-500', label: t('Degraded (50-90%)') },
+    { color: 'bg-red-500', label: t('Error (<50%)') },
     { color: 'bg-gray-400', label: t('No Data') },
   ]
 

@@ -55,6 +55,7 @@ const headerNavSchema = z.object({
   rankingsRequireAuth: z.boolean(),
   modelMonitorEnabled: z.boolean(),
   modelMonitorRequireAuth: z.boolean(),
+  monitorSuccessOnly: z.boolean(),
   docs: z.boolean(),
   about: z.boolean(),
 })
@@ -64,9 +65,10 @@ type HeaderNavFormValues = z.infer<typeof headerNavSchema>
 type HeaderNavigationSectionProps = {
   config: HeaderNavModulesConfig
   initialSerialized: string
+  monitorSuccessOnly: boolean
 }
 
-const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
+const toFormValues = (config: HeaderNavModulesConfig, monitorSuccessOnly: boolean): HeaderNavFormValues => ({
   home:
     config.home === undefined ? HEADER_NAV_DEFAULT.home : Boolean(config.home),
   console:
@@ -97,6 +99,7 @@ const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
     config.modelMonitor?.requireAuth === undefined
       ? HEADER_NAV_DEFAULT.modelMonitor?.requireAuth ?? false
       : Boolean(config.modelMonitor.requireAuth),
+  monitorSuccessOnly: monitorSuccessOnly,
   docs:
     config.docs === undefined ? HEADER_NAV_DEFAULT.docs : Boolean(config.docs),
   about:
@@ -108,10 +111,11 @@ const toFormValues = (config: HeaderNavModulesConfig): HeaderNavFormValues => ({
 export function HeaderNavigationSection({
   config,
   initialSerialized,
+  monitorSuccessOnly,
 }: HeaderNavigationSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
-  const formDefaults = useMemo(() => toFormValues(config), [config])
+  const formDefaults = useMemo(() => toFormValues(config, monitorSuccessOnly), [config, monitorSuccessOnly])
 
   const form = useForm<HeaderNavFormValues>({
     resolver: zodResolver(headerNavSchema),
@@ -147,18 +151,26 @@ export function HeaderNavigationSection({
     }
 
     const serialized = serializeHeaderNavModules(payload)
-    if (serialized === initialSerialized) {
-      return
+
+    // Update HeaderNavModules
+    if (serialized !== initialSerialized) {
+      await updateOption.mutateAsync({
+        key: 'HeaderNavModules',
+        value: serialized,
+      })
     }
 
-    await updateOption.mutateAsync({
-      key: 'HeaderNavModules',
-      value: serialized,
-    })
+    // Update monitor_setting.monitor_success_only separately
+    if (values.monitorSuccessOnly !== monitorSuccessOnly) {
+      await updateOption.mutateAsync({
+        key: 'monitor_setting.monitor_success_only',
+        value: values.monitorSuccessOnly,
+      })
+    }
   }
 
   const resetToDefault = () => {
-    form.reset(toFormValues(HEADER_NAV_DEFAULT))
+    form.reset(toFormValues(HEADER_NAV_DEFAULT, false))
   }
 
   const simpleModules: Array<{
@@ -315,6 +327,33 @@ export function HeaderNavigationSection({
                     </SettingsControlChildren>
                   )}
                 />
+
+                {module.enabledKey === 'modelMonitorEnabled' && (
+                  <FormField
+                    control={form.control}
+                    name='monitorSuccessOnly'
+                    render={({ field }) => (
+                      <SettingsControlChildren>
+                        <SettingsSwitchItem className='border-b-0 py-2'>
+                          <SettingsSwitchContent>
+                            <FormLabel>{t('Count success only')}</FormLabel>
+                            <FormDescription>
+                              {t('Only count successful requests in model monitor statistics')}
+                            </FormDescription>
+                          </SettingsSwitchContent>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={!form.watch('modelMonitorEnabled')}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </SettingsSwitchItem>
+                      </SettingsControlChildren>
+                    )}
+                  />
+                )}
               </SettingsControlGroup>
             ))}
           </div>
