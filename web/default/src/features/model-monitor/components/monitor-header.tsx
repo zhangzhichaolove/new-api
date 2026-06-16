@@ -85,7 +85,7 @@ export function MonitorHeader({
 
       {summary && (
         <Card>
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">

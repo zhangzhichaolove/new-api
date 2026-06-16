@@ -32,7 +32,7 @@ export function StatusLegend() {
 
   return (
     <Card className="mb-6">
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="flex flex-wrap items-center gap-6">
           {items.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
