@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/perf_metrics_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -85,6 +86,7 @@ func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats,
 
 	now := time.Now()
 	slotDuration := int64(windowHours * 3600 / 48) // 每个时段的秒数
+	// 向下取整到当前 slot 的起始时间，确保当前时刻落在最后一个时间段内
 	nowSlot := (now.Unix() / slotDuration) * slotDuration
 
 	// 按时间段聚合（将 perf_metrics 的细粒度 bucket 聚合到48个时间段）
@@ -98,21 +100,45 @@ func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats,
 	var totalSuccess int64 = 0
 
 	for bucketTs, counters := range buckets {
-		// 将 bucket_ts 映射到48时间段中的某一段
-		slotKey := (bucketTs / slotDuration) * slotDuration
-		if slotMap[slotKey] == nil {
-			slotMap[slotKey] = &slotData{}
+		// 将 perfmetrics 的 bucket_ts 映射到48个30分钟时间段
+		// 获取 bucket 的粒度配置
+		bucketSeconds := perf_metrics_setting.GetBucketSeconds()
+
+		// 计算 bucket 覆盖的 slot 范围
+		bucketStartSlot := (bucketTs / slotDuration) * slotDuration
+		bucketEndSlot := ((bucketTs + bucketSeconds - 1) / slotDuration) * slotDuration
+
+		// 计算被覆盖的 slot 数量
+		numSlots := (bucketEndSlot - bucketStartSlot) / slotDuration + 1
+		if numSlots < 1 {
+			numSlots = 1
 		}
 
-		// 如果开启"仅统计成功状态"，则只统计成功的请求
+		// 将 bucket 的数据平均分配到覆盖的所有 slot
+		for slotKey := bucketStartSlot; slotKey <= bucketEndSlot; slotKey += slotDuration {
+			if slotMap[slotKey] == nil {
+				slotMap[slotKey] = &slotData{}
+			}
+
+			// 平均分配到每个 slot
+			avgRequests := counters.RequestCount / numSlots
+			avgSuccess := counters.SuccessCount / numSlots
+
+			// 如果开启"仅统计成功状态"，则只统计成功的请求
+			if successOnly {
+				slotMap[slotKey].requestCount += avgSuccess
+				slotMap[slotKey].successCount += avgSuccess
+			} else {
+				slotMap[slotKey].requestCount += avgRequests
+				slotMap[slotKey].successCount += avgSuccess
+			}
+		}
+
+		// 累计总数（只累计一次，不要重复）
 		if successOnly {
-			slotMap[slotKey].requestCount += counters.SuccessCount
-			slotMap[slotKey].successCount += counters.SuccessCount
 			totalRequests += counters.SuccessCount
 			totalSuccess += counters.SuccessCount
 		} else {
-			slotMap[slotKey].requestCount += counters.RequestCount
-			slotMap[slotKey].successCount += counters.SuccessCount
 			totalRequests += counters.RequestCount
 			totalSuccess += counters.SuccessCount
 		}
