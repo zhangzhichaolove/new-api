@@ -8,9 +8,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/model"
-	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
-	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/setting/perf_metrics_setting"
 	"github.com/gin-gonic/gin"
 )
 
@@ -71,124 +68,9 @@ func calculateStatus(successRate float64, hasData bool) string {
 }
 
 func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats, error) {
-	// 使用 perf_metrics 系统查询数据（更准确的成功率统计）
-	// 不再使用 logs 表的 LogTypeConsume/LogTypeError，因为那些代表"扣费"而非"请求成功"
-
-	// 查询原始 bucket 数据（自动合并数据库和内存中的热数据）
-	buckets, err := perfmetrics.QueryModelRawBuckets(modelName, windowHours)
-	if err != nil {
-		return nil, err
-	}
-
-	// 获取监控配置
-	monitorSetting := operation_setting.GetMonitorSetting()
-	successOnly := monitorSetting.MonitorSuccessOnly
-
-	now := time.Now()
-	slotDuration := int64(windowHours * 3600 / 48) // 每个时段的秒数
-	// 向下取整到当前 slot 的起始时间，确保当前时刻落在最后一个时间段内
-	nowSlot := (now.Unix() / slotDuration) * slotDuration
-
-	// 按时间段聚合（将 perf_metrics 的细粒度 bucket 聚合到48个时间段）
-	type slotData struct {
-		requestCount int64
-		successCount int64
-	}
-	slotMap := make(map[int64]*slotData)
-
-	var totalRequests int64 = 0
-	var totalSuccess int64 = 0
-
-	for bucketTs, counters := range buckets {
-		// 将 perfmetrics 的 bucket_ts 映射到48个30分钟时间段
-		// 获取 bucket 的粒度配置
-		bucketSeconds := perf_metrics_setting.GetBucketSeconds()
-
-		// 计算 bucket 覆盖的 slot 范围
-		bucketStartSlot := (bucketTs / slotDuration) * slotDuration
-		bucketEndSlot := ((bucketTs + bucketSeconds - 1) / slotDuration) * slotDuration
-
-		// 计算被覆盖的 slot 数量
-		numSlots := (bucketEndSlot - bucketStartSlot) / slotDuration + 1
-		if numSlots < 1 {
-			numSlots = 1
-		}
-
-		// 将 bucket 的数据平均分配到覆盖的所有 slot
-		for slotKey := bucketStartSlot; slotKey <= bucketEndSlot; slotKey += slotDuration {
-			if slotMap[slotKey] == nil {
-				slotMap[slotKey] = &slotData{}
-			}
-
-			// 平均分配到每个 slot
-			avgRequests := counters.RequestCount / numSlots
-			avgSuccess := counters.SuccessCount / numSlots
-
-			// 如果开启"仅统计成功状态"，则只统计成功的请求
-			if successOnly {
-				slotMap[slotKey].requestCount += avgSuccess
-				slotMap[slotKey].successCount += avgSuccess
-			} else {
-				slotMap[slotKey].requestCount += avgRequests
-				slotMap[slotKey].successCount += avgSuccess
-			}
-		}
-
-		// 累计总数（只累计一次，不要重复）
-		if successOnly {
-			totalRequests += counters.SuccessCount
-			totalSuccess += counters.SuccessCount
-		} else {
-			totalRequests += counters.RequestCount
-			totalSuccess += counters.SuccessCount
-		}
-	}
-
-	// 生成48个时间段的时间线
-	timeline := make([]TimeSlotStats, 48)
-
-	for i := 0; i < 48; i++ {
-		slotKey := nowSlot - int64(47-i)*slotDuration
-		slotStart := time.Unix(slotKey, 0)
-		slotEnd := slotStart.Add(time.Duration(slotDuration) * time.Second)
-
-		var successRate float64 = 0
-		var totalReq int64 = 0
-
-		if data, exists := slotMap[slotKey]; exists {
-			totalReq = data.requestCount
-			if totalReq > 0 {
-				successRate = float64(data.successCount) / float64(totalReq) * 100
-			}
-		}
-
-		hasData := totalReq > 0
-		timeline[i] = TimeSlotStats{
-			StartTime:     slotStart.Unix(),
-			EndTime:       slotEnd.Unix(),
-			SuccessRate:   successRate,
-			TotalRequests: int(totalReq),
-			Status:        calculateStatus(successRate, hasData),
-		}
-	}
-
-	// 计算整体统计
-	var overallSuccessRate float64 = 0
-	hasData := totalRequests > 0
-
-	if hasData {
-		overallSuccessRate = float64(totalSuccess) / float64(totalRequests) * 100
-	}
-
-	return &ModelMonitorStats{
-		ModelName:     modelName,
-		Status:        calculateStatus(overallSuccessRate, hasData),
-		SuccessRate:   overallSuccessRate,
-		TotalRequests: int(totalRequests),
-		SuccessCount:  int(totalSuccess),
-		ErrorCount:    int(totalRequests - totalSuccess),
-		Timeline:      timeline,
-	}, nil
+	// 使用 logs 表查询精确数据，而不是 perf_metrics 的聚合数据
+	// 这样可以获得每个请求的准确时间，避免bucket聚合带来的时间偏差
+	return calculateModelStatsFromLogs(modelName, windowHours)
 }
 
 // GetModelMonitorStats 获取监控统计数据
