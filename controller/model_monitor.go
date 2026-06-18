@@ -79,9 +79,7 @@ func isModelVisibleToUser(modelName string, modelGroupsMap map[string][]string, 
 	// Get the model's enable groups
 	enableGroups, exists := modelGroupsMap[modelName]
 	if !exists || len(enableGroups) == 0 {
-		// Model not found in pricing or has no groups defined
-		// For backward compatibility, allow models not in pricing map (e.g., disabled/deleted models)
-		return true
+		return false
 	}
 
 	// Check if the model is available to "all" groups
@@ -173,13 +171,16 @@ func GetModelMonitorStats(c *gin.Context) {
 		usableGroups = service.GetUserUsableGroups(userGroup)
 	}
 
-	// 获取所有模型的定价信息（包含 enable_groups）
+	// 获取当前启用模型的可访问分组
 	var modelGroupsMap map[string][]string
 	if !showAllModels {
-		pricing := model.GetPricing()
-		modelGroupsMap = make(map[string][]string)
-		for _, p := range pricing {
-			modelGroupsMap[p.ModelName] = p.EnableGroup
+		modelGroupsMap, err = model.GetEnabledModelGroupsMap()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
 		}
 	}
 

@@ -52,6 +52,32 @@ func GetEnabledModels() []string {
 	return models
 }
 
+func GetEnabledModelGroupsMap() (map[string][]string, error) {
+	var abilities []Ability
+	err := DB.Model(&Ability{}).
+		Select("abilities.model, abilities."+commonGroupCol).
+		Joins("LEFT JOIN models ON abilities.model = models.model_name").
+		Where("abilities.enabled = ?", true).
+		Where("abilities.model != ''").
+		Where("(models.model_name IS NULL OR models.status = ?)", 1).
+		Find(&abilities).Error
+	if err != nil {
+		return nil, err
+	}
+
+	modelGroupsMap := make(map[string][]string)
+	for _, ability := range abilities {
+		if ability.Model == "" || ability.Group == "" {
+			continue
+		}
+		if common.StringsContains(modelGroupsMap[ability.Model], ability.Group) {
+			continue
+		}
+		modelGroupsMap[ability.Model] = append(modelGroupsMap[ability.Model], ability.Group)
+	}
+	return modelGroupsMap, nil
+}
+
 func GetAllEnableAbilities() []Ability {
 	var abilities []Ability
 	DB.Find(&abilities, "enabled = ?", true)
