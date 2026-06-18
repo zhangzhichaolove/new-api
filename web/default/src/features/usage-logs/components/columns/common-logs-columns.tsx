@@ -204,11 +204,38 @@ function buildDetailSegments(
   } else {
     const isPerCall = isPerCallBilling(other.model_price)
     if (isPerCall) {
+      const perCallPrice = other.model_price!
+      // Apply channel ratio to per-call price
+      const userGroupRatio = other.user_group_ratio
+      const groupRatio = other.group_ratio
+      const isUserGroup =
+        userGroupRatio != null &&
+        Number.isFinite(userGroupRatio) &&
+        userGroupRatio !== -1
+      const effectiveRatio = isUserGroup ? userGroupRatio : groupRatio
+      const finalPrice =
+        effectiveRatio != null && Number.isFinite(effectiveRatio)
+          ? perCallPrice * effectiveRatio
+          : perCallPrice
       segments.push({
-        text: `${t('Per-call')} · ${formatBillingCurrencyFromUSD(other.model_price!, priceOpts)}`,
+        text: `${t('Per-call')} · ${formatBillingCurrencyFromUSD(finalPrice, priceOpts)}`,
       })
     } else if (other.model_ratio != null) {
-      const inputPriceUSD = other.model_ratio * 2.0
+      // Calculate effective channel ratio (user_group_ratio takes precedence over group_ratio)
+      const userGroupRatio = other.user_group_ratio
+      const groupRatio = other.group_ratio
+      const isUserGroup =
+        userGroupRatio != null &&
+        Number.isFinite(userGroupRatio) &&
+        userGroupRatio !== -1
+      const effectiveRatio = isUserGroup ? userGroupRatio : groupRatio
+      const channelMultiplier =
+        effectiveRatio != null && Number.isFinite(effectiveRatio)
+          ? effectiveRatio
+          : 1.0
+
+      // Apply both model_ratio and channel ratio to get the actual price user pays
+      const inputPriceUSD = other.model_ratio * 2.0 * channelMultiplier
       const baseEntries = [formatPriceCompact(inputPriceUSD)]
       if (other.completion_ratio != null) {
         baseEntries.push(

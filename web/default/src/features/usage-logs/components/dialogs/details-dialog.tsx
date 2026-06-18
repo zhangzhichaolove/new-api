@@ -156,7 +156,22 @@ function BillingBreakdown(props: {
   const rows: Array<{ label: string; value: string }> = []
   const priceOpts = { digitsLarge: 4, digitsSmall: 6, abbreviate: false }
   const fmtPrice = (usd: number) => formatBillingCurrencyFromUSD(usd, priceOpts)
-  const baseInputUSD = other.model_ratio != null ? other.model_ratio * 2.0 : 0
+
+  // Calculate effective channel ratio (user_group_ratio takes precedence over group_ratio)
+  const userGroupRatio = other.user_group_ratio
+  const groupRatio = other.group_ratio
+  const isUserGroup =
+    userGroupRatio != null &&
+    Number.isFinite(userGroupRatio) &&
+    userGroupRatio !== -1
+  const effectiveRatio = isUserGroup ? userGroupRatio : groupRatio
+  const channelMultiplier =
+    effectiveRatio != null && Number.isFinite(effectiveRatio)
+      ? effectiveRatio
+      : 1.0
+
+  // Apply both model_ratio and channel ratio to get the actual price user pays
+  const baseInputUSD = other.model_ratio != null ? other.model_ratio * 2.0 * channelMultiplier : 0
 
   if (isTieredExpr) {
     rows.push({
@@ -185,9 +200,11 @@ function BillingBreakdown(props: {
   } else if (isPerCall) {
     rows.push({ label: t('Billing Mode'), value: t('Per-call') })
     if (other.model_price != null) {
+      // Apply channel ratio to per-call price
+      const finalPrice = other.model_price * channelMultiplier
       rows.push({
         label: t('Model Price'),
-        value: fmtPrice(other.model_price),
+        value: fmtPrice(finalPrice),
       })
     }
   } else {
