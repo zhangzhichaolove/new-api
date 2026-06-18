@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -67,6 +69,36 @@ func calculateStatus(successRate float64, hasData bool) string {
 	return "error"
 }
 
+// isModelVisibleToUser checks if a model is visible to the user based on their usable groups
+func isModelVisibleToUser(modelName string, modelGroupsMap map[string][]string, usableGroups map[string]string) bool {
+	// If the user has no usable groups, they cannot see any models
+	if len(usableGroups) == 0 {
+		return false
+	}
+
+	// Get the model's enable groups
+	enableGroups, exists := modelGroupsMap[modelName]
+	if !exists || len(enableGroups) == 0 {
+		// Model not found in pricing or has no groups defined
+		// For backward compatibility, allow models not in pricing map (e.g., disabled/deleted models)
+		return true
+	}
+
+	// Check if the model is available to "all" groups
+	if common.StringsContains(enableGroups, "all") {
+		return true
+	}
+
+	// Check if any of the model's enable groups intersects with user's usable groups
+	for _, group := range enableGroups {
+		if _, ok := usableGroups[group]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats, error) {
 	// 使用 logs 表查询精确数据，而不是 perf_metrics 的聚合数据
 	// 这样可以获得每个请求的准确时间，避免bucket聚合带来的时间偏差
@@ -87,15 +119,42 @@ func GetModelMonitorStats(c *gin.Context) {
 		return
 	}
 
-	// 计算每个模型的统计数据
+	// 获取当前用户的可用分组，用于过滤模型
+	userId, exists := c.Get("id")
+	var userGroup string
+	var usableGroups map[string]string
+
+	if exists {
+		user, err := model.GetUserCache(userId.(int))
+		if err == nil {
+			userGroup = user.Group
+		}
+	}
+
+	// 获取用户可见的分组
+	usableGroups = service.GetUserUsableGroups(userGroup)
+
+	// 获取所有模型的定价信息（包含 enable_groups）
+	pricing := model.GetPricing()
+	modelGroupsMap := make(map[string][]string)
+	for _, p := range pricing {
+		modelGroupsMap[p.ModelName] = p.EnableGroup
+	}
+
+	// 计算每个模型的统计数据，并根据用户可用分组过滤
 	modelsStats := make([]ModelMonitorStats, 0, len(monitors))
 	summary := ModelMonitorSummary{
 		WindowHours:   windowHours,
-		TotalModels:   len(monitors),
+		TotalModels:   0, // 将在过滤后更新
 		LastRefreshAt: time.Now().Unix(),
 	}
 
 	for _, monitor := range monitors {
+		// 检查当前用户是否可以访问该模型
+		if !isModelVisibleToUser(monitor.ModelName, modelGroupsMap, usableGroups) {
+			continue
+		}
+
 		stats, err := calculateModelStats(monitor.ModelName, windowHours)
 		if err != nil {
 			continue
@@ -115,6 +174,9 @@ func GetModelMonitorStats(c *gin.Context) {
 			summary.NoDataCount++
 		}
 	}
+
+	// 更新总数为过滤后的数量
+	summary.TotalModels = len(modelsStats)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
