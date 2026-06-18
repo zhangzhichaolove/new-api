@@ -28,6 +28,16 @@ export const Route = createFileRoute('/model-monitor/')({
     if (!access.enabled) {
       throw redirect({ to: '/' })
     }
+
+    // Check if adminOnly is enabled
+    if (access.adminOnly) {
+      const { auth } = useAuthStore.getState()
+      const isAdmin = auth?.user?.role === 100
+      if (!isAdmin) {
+        throw redirect({ to: '/' })
+      }
+    }
+
     if (access.requireAuth) {
       const { auth } = useAuthStore.getState()
       if (!auth.user) {
