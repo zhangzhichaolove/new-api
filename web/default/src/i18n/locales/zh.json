@@ -2020,6 +2020,8 @@
     "Count success only": "仅统计成功状态",
     "Only count successful requests in model monitor statistics": "模型监控统计中仅统计成功的请求",
     "Admin only": "仅管理员可见",
+    "Show all monitored models": "显示所有监控模型",
+    "Users can see all monitored models regardless of their group permissions": "用户可以看到所有监控模型，不受分组权限限制",
     "Only administrators can view model status monitor": "只有管理员可以查看模型状态监控",
     "How It Works": "工作流程",
     "How model mapping works": "模型映射如何工作",

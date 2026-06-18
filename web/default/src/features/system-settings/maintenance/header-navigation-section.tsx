@@ -56,6 +56,7 @@ const headerNavSchema = z.object({
   modelMonitorEnabled: z.boolean(),
   modelMonitorRequireAuth: z.boolean(),
   modelMonitorAdminOnly: z.boolean(),
+  modelMonitorShowAll: z.boolean(),
   monitorSuccessOnly: z.boolean(),
   docs: z.boolean(),
   about: z.boolean(),
@@ -104,6 +105,10 @@ const toFormValues = (config: HeaderNavModulesConfig, monitorSuccessOnly: boolea
     config.modelMonitor?.adminOnly === undefined
       ? HEADER_NAV_DEFAULT.modelMonitor?.adminOnly ?? false
       : Boolean(config.modelMonitor.adminOnly),
+  modelMonitorShowAll:
+    config.modelMonitor?.showAll === undefined
+      ? HEADER_NAV_DEFAULT.modelMonitor?.showAll ?? false
+      : Boolean(config.modelMonitor.showAll),
   monitorSuccessOnly: monitorSuccessOnly,
   docs:
     config.docs === undefined ? HEADER_NAV_DEFAULT.docs : Boolean(config.docs),
@@ -149,10 +154,11 @@ export function HeaderNavigationSection({
         requireAuth: values.rankingsRequireAuth,
       },
       modelMonitor: {
-        ...(config.modelMonitor ?? HEADER_NAV_DEFAULT.modelMonitor ?? { enabled: true, requireAuth: false, adminOnly: false }),
+        ...(config.modelMonitor ?? HEADER_NAV_DEFAULT.modelMonitor ?? { enabled: true, requireAuth: false, adminOnly: false, showAll: false }),
         enabled: values.modelMonitorEnabled,
         requireAuth: values.modelMonitorRequireAuth,
         adminOnly: values.modelMonitorAdminOnly,
+        showAll: values.modelMonitorShowAll,
       },
     }
 
@@ -346,6 +352,30 @@ export function HeaderNavigationSection({
                               <FormLabel>{t('Admin only')}</FormLabel>
                               <FormDescription>
                                 {t('Only administrators can view model status monitor')}
+                              </FormDescription>
+                            </SettingsSwitchContent>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={!form.watch('modelMonitorEnabled')}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </SettingsSwitchItem>
+                        </SettingsControlChildren>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name='modelMonitorShowAll'
+                      render={({ field }) => (
+                        <SettingsControlChildren>
+                          <SettingsSwitchItem className='border-b-0 py-2'>
+                            <SettingsSwitchContent>
+                              <FormLabel>{t('Show all monitored models')}</FormLabel>
+                              <FormDescription>
+                                {t('Users can see all monitored models regardless of their group permissions')}
                               </FormDescription>
                             </SettingsSwitchContent>
                             <FormControl>

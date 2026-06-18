@@ -99,6 +99,41 @@ func isModelVisibleToUser(modelName string, modelGroupsMap map[string][]string, 
 	return false
 }
 
+// isModelMonitorShowAllEnabled checks if "Show all monitored models" is enabled in HeaderNavModules config
+func isModelMonitorShowAllEnabled() bool {
+	headerNavModulesStr, ok := common.OptionMap["HeaderNavModules"]
+	if !ok || headerNavModulesStr == "" {
+		return false
+	}
+
+	var config map[string]interface{}
+	if err := common.UnmarshalJsonStr(headerNavModulesStr, &config); err != nil {
+		return false
+	}
+
+	modelMonitor, ok := config["modelMonitor"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	showAll, ok := modelMonitor["showAll"]
+	if !ok {
+		return false
+	}
+
+	// Handle different types
+	switch v := showAll.(type) {
+	case bool:
+		return v
+	case float64:
+		return v == 1
+	case string:
+		return v == "true" || v == "1"
+	default:
+		return false
+	}
+}
+
 func calculateModelStats(modelName string, windowHours int) (*ModelMonitorStats, error) {
 	// 使用 logs 表查询精确数据，而不是 perf_metrics 的聚合数据
 	// 这样可以获得每个请求的准确时间，避免bucket聚合带来的时间偏差
@@ -119,29 +154,34 @@ func GetModelMonitorStats(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户的可用分组，用于过滤模型
+	// 检查是否启用了 "显示所有监控模型" 配置
+	showAllModels := isModelMonitorShowAllEnabled()
+
+	// 获取当前用户的可用分组，用于过滤模型（如果未启用 showAll）
 	userId, exists := c.Get("id")
 	var userGroup string
 	var usableGroups map[string]string
 
-	if exists {
+	if !showAllModels && exists {
 		user, err := model.GetUserCache(userId.(int))
 		if err == nil {
 			userGroup = user.Group
 		}
+		// 获取用户可见的分组
+		usableGroups = service.GetUserUsableGroups(userGroup)
 	}
-
-	// 获取用户可见的分组
-	usableGroups = service.GetUserUsableGroups(userGroup)
 
 	// 获取所有模型的定价信息（包含 enable_groups）
-	pricing := model.GetPricing()
-	modelGroupsMap := make(map[string][]string)
-	for _, p := range pricing {
-		modelGroupsMap[p.ModelName] = p.EnableGroup
+	var modelGroupsMap map[string][]string
+	if !showAllModels {
+		pricing := model.GetPricing()
+		modelGroupsMap = make(map[string][]string)
+		for _, p := range pricing {
+			modelGroupsMap[p.ModelName] = p.EnableGroup
+		}
 	}
 
-	// 计算每个模型的统计数据，并根据用户可用分组过滤
+	// 计算每个模型的统计数据，并根据用户可用分组过滤（如果未启用 showAll）
 	modelsStats := make([]ModelMonitorStats, 0, len(monitors))
 	summary := ModelMonitorSummary{
 		WindowHours:   windowHours,
@@ -150,8 +190,8 @@ func GetModelMonitorStats(c *gin.Context) {
 	}
 
 	for _, monitor := range monitors {
-		// 检查当前用户是否可以访问该模型
-		if !isModelVisibleToUser(monitor.ModelName, modelGroupsMap, usableGroups) {
+		// 如果启用了 showAll，跳过权限检查；否则检查用户权限
+		if !showAllModels && !isModelVisibleToUser(monitor.ModelName, modelGroupsMap, usableGroups) {
 			continue
 		}
 

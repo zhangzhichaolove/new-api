@@ -2020,6 +2020,8 @@
     "Count success only": "Считать только успешные",
     "Only count successful requests in model monitor statistics": "Считать только успешные запросы в статистике мониторинга модели",
     "Admin only": "Только для администраторов",
+    "Show all monitored models": "Показать все отслеживаемые модели",
+    "Users can see all monitored models regardless of their group permissions": "Пользователи могут видеть все отслеживаемые модели независимо от их групповых разрешений",
     "Only administrators can view model status monitor": "Только администраторы могут просматривать монитор состояния модели",
     "How It Works": "Как это работает",
     "How model mapping works": "Как работает сопоставление моделей",

@@ -2020,6 +2020,8 @@
     "Count success only": "Compter uniquement les succès",
     "Only count successful requests in model monitor statistics": "Ne compter que les requêtes réussies dans les statistiques de surveillance du modèle",
     "Admin only": "Administrateurs uniquement",
+    "Show all monitored models": "Afficher tous les modèles surveillés",
+    "Users can see all monitored models regardless of their group permissions": "Les utilisateurs peuvent voir tous les modèles surveillés quels que soient leurs permissions de groupe",
     "Only administrators can view model status monitor": "Seuls les administrateurs peuvent voir le moniteur d'état du modèle",
     "How It Works": "Comment ça marche",
     "How model mapping works": "Fonctionnement du mappage des modèles",

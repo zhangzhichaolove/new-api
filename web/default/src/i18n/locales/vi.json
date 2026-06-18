@@ -2020,6 +2020,8 @@
     "Count success only": "Chỉ đếm thành công",
     "Only count successful requests in model monitor statistics": "Chỉ đếm các yêu cầu thành công trong thống kê giám sát mô hình",
     "Admin only": "Chỉ quản trị viên",
+    "Show all monitored models": "Hiển thị tất cả mô hình giám sát",
+    "Users can see all monitored models regardless of their group permissions": "Người dùng có thể xem tất cả mô hình giám sát bất kể quyền nhóm của họ",
     "Only administrators can view model status monitor": "Chỉ quản trị viên mới có thể xem giám sát trạng thái mô hình",
     "How It Works": "Cách hoạt động",
     "How model mapping works": "Cách hoạt động của ánh xạ mô hình",
