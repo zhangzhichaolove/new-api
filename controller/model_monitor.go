@@ -162,12 +162,14 @@ func GetModelMonitorStats(c *gin.Context) {
 	var userGroup string
 	var usableGroups map[string]string
 
-	if !showAllModels && exists {
-		user, err := model.GetUserCache(userId.(int))
-		if err == nil {
-			userGroup = user.Group
+	if !showAllModels {
+		if exists {
+			user, err := model.GetUserCache(userId.(int))
+			if err == nil {
+				userGroup = user.Group
+			}
 		}
-		// 获取用户可见的分组
+		// 获取可见的分组：未登录用户 userGroup 为空，GetUserUsableGroups 返回全部用户可用分组
 		usableGroups = service.GetUserUsableGroups(userGroup)
 	}
 
