@@ -18,11 +18,20 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import { useQuery } from '@tanstack/react-query'
+import { useAuthStore } from '@/stores/auth-store'
 import { getMonitorStats } from '../api'
 
 export function useMonitorStats() {
+  const user = useAuthStore((state) => state.auth.user)
+
   return useQuery({
-    queryKey: ['model-monitor', 'stats'],
+    queryKey: [
+      'model-monitor',
+      'stats',
+      user?.id ?? 'anonymous',
+      user?.group ?? '',
+      user?.role ?? 0,
+    ],
     queryFn: getMonitorStats,
     staleTime: 10_000, // 10秒后标记为过期
     refetchInterval: 20_000, // 每20秒自动刷新
