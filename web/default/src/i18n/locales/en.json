@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "How frequently the system tests all channels",
     "Count success only": "Count success only",
     "Only count successful requests in model monitor statistics": "Only count successful requests in model monitor statistics",
+    "Admin only": "Admin only",
+    "Only administrators can view model status monitor": "Only administrators can view model status monitor",
     "How It Works": "How It Works",
     "How model mapping works": "How model mapping works",
     "How much to charge for each US dollar of balance (Epay)": "How much to charge for each US dollar of balance (Epay)",

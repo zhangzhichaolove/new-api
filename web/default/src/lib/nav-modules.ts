@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { getStatus } from '@/lib/api'
 
-export type ModuleAccess = { enabled: boolean; requireAuth: boolean }
+export type ModuleAccess = { enabled: boolean; requireAuth: boolean; adminOnly?: boolean }
 
 export type HeaderNavModule = 'rankings' | 'pricing' | 'modelMonitor'
 
@@ -38,7 +38,7 @@ const DEFAULT_HEADER_NAV_MODULES: HeaderNavModules = {
   console: true,
   pricing: { enabled: true, requireAuth: false },
   rankings: { enabled: true, requireAuth: false },
-  modelMonitor: { enabled: true, requireAuth: false },
+  modelMonitor: { enabled: true, requireAuth: false, adminOnly: false },
   docs: true,
   about: true,
 }
@@ -87,6 +87,7 @@ function parseAccess(raw: unknown, fallback: ModuleAccess): ModuleAccess {
     return {
       enabled: parseHeaderNavBoolean(raw, fallback.enabled),
       requireAuth: fallback.requireAuth,
+      adminOnly: fallback.adminOnly,
     }
   }
   if (raw && typeof raw === 'object') {
@@ -94,6 +95,7 @@ function parseAccess(raw: unknown, fallback: ModuleAccess): ModuleAccess {
     return {
       enabled: parseHeaderNavBoolean(r.enabled, fallback.enabled),
       requireAuth: parseHeaderNavBoolean(r.requireAuth, fallback.requireAuth),
+      adminOnly: parseHeaderNavBoolean(r.adminOnly, fallback.adminOnly ?? false),
     }
   }
   return { ...fallback }
@@ -127,7 +129,7 @@ export function parseHeaderNavModules(raw: unknown): HeaderNavModules {
     if (key === 'modelMonitor') {
       result.modelMonitor = parseAccess(
         value,
-        result.modelMonitor ?? { enabled: true, requireAuth: false }
+        result.modelMonitor ?? { enabled: true, requireAuth: false, adminOnly: false }
       )
       return
     }

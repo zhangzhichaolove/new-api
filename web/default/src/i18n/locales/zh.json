@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "系统测试所有渠道的频率",
     "Count success only": "仅统计成功状态",
     "Only count successful requests in model monitor statistics": "模型监控统计中仅统计成功的请求",
+    "Admin only": "仅管理员可见",
+    "Only administrators can view model status monitor": "只有管理员可以查看模型状态监控",
     "How It Works": "工作流程",
     "How model mapping works": "模型映射如何工作",
     "How much to charge for each US dollar of balance (Epay)": "每美元余额（Epay）的收费金额",

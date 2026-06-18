@@ -55,6 +55,7 @@ const headerNavSchema = z.object({
   rankingsRequireAuth: z.boolean(),
   modelMonitorEnabled: z.boolean(),
   modelMonitorRequireAuth: z.boolean(),
+  modelMonitorAdminOnly: z.boolean(),
   monitorSuccessOnly: z.boolean(),
   docs: z.boolean(),
   about: z.boolean(),
@@ -99,6 +100,10 @@ const toFormValues = (config: HeaderNavModulesConfig, monitorSuccessOnly: boolea
     config.modelMonitor?.requireAuth === undefined
       ? HEADER_NAV_DEFAULT.modelMonitor?.requireAuth ?? false
       : Boolean(config.modelMonitor.requireAuth),
+  modelMonitorAdminOnly:
+    config.modelMonitor?.adminOnly === undefined
+      ? HEADER_NAV_DEFAULT.modelMonitor?.adminOnly ?? false
+      : Boolean(config.modelMonitor.adminOnly),
   monitorSuccessOnly: monitorSuccessOnly,
   docs:
     config.docs === undefined ? HEADER_NAV_DEFAULT.docs : Boolean(config.docs),
@@ -144,9 +149,10 @@ export function HeaderNavigationSection({
         requireAuth: values.rankingsRequireAuth,
       },
       modelMonitor: {
-        ...(config.modelMonitor ?? HEADER_NAV_DEFAULT.modelMonitor ?? { enabled: true, requireAuth: false }),
+        ...(config.modelMonitor ?? HEADER_NAV_DEFAULT.modelMonitor ?? { enabled: true, requireAuth: false, adminOnly: false }),
         enabled: values.modelMonitorEnabled,
         requireAuth: values.modelMonitorRequireAuth,
+        adminOnly: values.modelMonitorAdminOnly,
       },
     }
 
@@ -329,30 +335,56 @@ export function HeaderNavigationSection({
                 />
 
                 {module.enabledKey === 'modelMonitorEnabled' && (
-                  <FormField
-                    control={form.control}
-                    name='monitorSuccessOnly'
-                    render={({ field }) => (
-                      <SettingsControlChildren>
-                        <SettingsSwitchItem className='border-b-0 py-2'>
-                          <SettingsSwitchContent>
-                            <FormLabel>{t('Count success only')}</FormLabel>
-                            <FormDescription>
-                              {t('Only count successful requests in model monitor statistics')}
-                            </FormDescription>
-                          </SettingsSwitchContent>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={!form.watch('modelMonitorEnabled')}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </SettingsSwitchItem>
-                      </SettingsControlChildren>
-                    )}
-                  />
+                  <>
+                    <FormField
+                      control={form.control}
+                      name='modelMonitorAdminOnly'
+                      render={({ field }) => (
+                        <SettingsControlChildren>
+                          <SettingsSwitchItem className='border-b-0 py-2'>
+                            <SettingsSwitchContent>
+                              <FormLabel>{t('Admin only')}</FormLabel>
+                              <FormDescription>
+                                {t('Only administrators can view model status monitor')}
+                              </FormDescription>
+                            </SettingsSwitchContent>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={!form.watch('modelMonitorEnabled')}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </SettingsSwitchItem>
+                        </SettingsControlChildren>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name='monitorSuccessOnly'
+                      render={({ field }) => (
+                        <SettingsControlChildren>
+                          <SettingsSwitchItem className='border-b-0 py-2'>
+                            <SettingsSwitchContent>
+                              <FormLabel>{t('Count success only')}</FormLabel>
+                              <FormDescription>
+                                {t('Only count successful requests in model monitor statistics')}
+                              </FormDescription>
+                            </SettingsSwitchContent>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={!form.watch('modelMonitorEnabled')}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </SettingsSwitchItem>
+                        </SettingsControlChildren>
+                      )}
+                    />
+                  </>
                 )}
               </SettingsControlGroup>
             ))}

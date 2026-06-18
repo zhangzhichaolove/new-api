@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "Tần suất hệ thống kiểm tra tất cả các kênh là bao nhiêu?",
     "Count success only": "Chỉ đếm thành công",
     "Only count successful requests in model monitor statistics": "Chỉ đếm các yêu cầu thành công trong thống kê giám sát mô hình",
+    "Admin only": "Chỉ quản trị viên",
+    "Only administrators can view model status monitor": "Chỉ quản trị viên mới có thể xem giám sát trạng thái mô hình",
     "How It Works": "Cách hoạt động",
     "How model mapping works": "Cách hoạt động của ánh xạ mô hình",
     "How much to charge for each US dollar of balance (Epay)": "Tính phí bao nhiêu cho mỗi đô la Mỹ số dư (Epay)",

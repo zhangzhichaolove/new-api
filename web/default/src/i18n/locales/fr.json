@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "Fréquence à laquelle le système teste tous les canaux",
     "Count success only": "Compter uniquement les succès",
     "Only count successful requests in model monitor statistics": "Ne compter que les requêtes réussies dans les statistiques de surveillance du modèle",
+    "Admin only": "Administrateurs uniquement",
+    "Only administrators can view model status monitor": "Seuls les administrateurs peuvent voir le moniteur d'état du modèle",
     "How It Works": "Comment ça marche",
     "How model mapping works": "Fonctionnement du mappage des modèles",
     "How much to charge for each US dollar of balance (Epay)": "Montant à facturer pour chaque dollar US de solde (Epay)",

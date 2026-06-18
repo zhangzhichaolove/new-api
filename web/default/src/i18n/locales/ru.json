@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "Как часто система тестирует все каналы",
     "Count success only": "Считать только успешные",
     "Only count successful requests in model monitor statistics": "Считать только успешные запросы в статистике мониторинга модели",
+    "Admin only": "Только для администраторов",
+    "Only administrators can view model status monitor": "Только администраторы могут просматривать монитор состояния модели",
     "How It Works": "Как это работает",
     "How model mapping works": "Как работает сопоставление моделей",
     "How much to charge for each US dollar of balance (Epay)": "Сколько взимать за каждый доллар США баланса (Epay)",

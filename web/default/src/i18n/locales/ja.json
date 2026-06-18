@@ -2019,6 +2019,8 @@
     "How frequently the system tests all channels": "システムがすべてのチャネルをテストする頻度",
     "Count success only": "成功のみをカウント",
     "Only count successful requests in model monitor statistics": "モデル監視統計で成功したリクエストのみをカウント",
+    "Admin only": "管理者のみ",
+    "Only administrators can view model status monitor": "管理者のみがモデルステータスモニターを表示できます",
     "How It Works": "仕組み",
     "How model mapping works": "モデルマッピングの仕組み",
     "How much to charge for each US dollar of balance (Epay)": "残高の 1 米ドルあたりに請求する金額 (Epay)",

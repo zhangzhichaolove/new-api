@@ -88,8 +88,14 @@ export function useTopNavLinks(): TopNavLink[] {
   // Model Monitor
   const modelMonitor = modules?.modelMonitor
   if (modelMonitor && typeof modelMonitor === 'object' && modelMonitor.enabled) {
-    const requiresAuth = modelMonitor.requireAuth && !isAuthed
-    links.push({ title: t('Model Status Monitor'), href: '/model-monitor', requiresAuth })
+    // If adminOnly is enabled, only show to admins
+    const isAdmin = auth?.user?.role === 100
+    if (modelMonitor.adminOnly && !isAdmin) {
+      // Skip this link for non-admin users
+    } else {
+      const requiresAuth = modelMonitor.requireAuth && !isAuthed
+      links.push({ title: t('Model Status Monitor'), href: '/model-monitor', requiresAuth })
+    }
   }
 
   // Docs (supports external links)
