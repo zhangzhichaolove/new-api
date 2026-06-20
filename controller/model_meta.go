@@ -3,7 +3,6 @@ package controller
 import (
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -221,16 +220,7 @@ func enrichModels(models []*model.Model) {
 	for _, p := range pricings {
 		for _, idx := range ruleIndices {
 			mm := models[idx]
-			var matched bool
-			switch mm.NameRule {
-			case model.NameRulePrefix:
-				matched = strings.HasPrefix(p.ModelName, mm.ModelName)
-			case model.NameRuleSuffix:
-				matched = strings.HasSuffix(p.ModelName, mm.ModelName)
-			case model.NameRuleContains:
-				matched = strings.Contains(p.ModelName, mm.ModelName)
-			}
-			if !matched {
+			if !model.MatchModelNameRule(p.ModelName, mm.ModelName, mm.NameRule) {
 				continue
 			}
 			matchedNamesByIdx[idx] = append(matchedNamesByIdx[idx], p.ModelName)

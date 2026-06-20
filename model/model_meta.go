@@ -141,27 +141,42 @@ func GetModelMetadataByNames(modelNames []string) (map[string]*Model, error) {
 
 	for _, m := range prefixList {
 		for _, modelName := range modelNames {
-			if _, exists := result[modelName]; !exists && strings.HasPrefix(modelName, m.ModelName) {
+			if _, exists := result[modelName]; !exists && MatchModelNameRule(modelName, m.ModelName, m.NameRule) {
 				result[modelName] = m
 			}
 		}
 	}
 	for _, m := range suffixList {
 		for _, modelName := range modelNames {
-			if _, exists := result[modelName]; !exists && strings.HasSuffix(modelName, m.ModelName) {
+			if _, exists := result[modelName]; !exists && MatchModelNameRule(modelName, m.ModelName, m.NameRule) {
 				result[modelName] = m
 			}
 		}
 	}
 	for _, m := range containsList {
 		for _, modelName := range modelNames {
-			if _, exists := result[modelName]; !exists && strings.Contains(modelName, m.ModelName) {
+			if _, exists := result[modelName]; !exists && MatchModelNameRule(modelName, m.ModelName, m.NameRule) {
 				result[modelName] = m
 			}
 		}
 	}
 
 	return result, nil
+}
+
+func MatchModelNameRule(modelName string, pattern string, nameRule int) bool {
+	switch nameRule {
+	case NameRuleExact:
+		return modelName == pattern
+	case NameRulePrefix:
+		return strings.HasPrefix(strings.ToLower(modelName), strings.ToLower(pattern))
+	case NameRuleSuffix:
+		return strings.HasSuffix(strings.ToLower(modelName), strings.ToLower(pattern))
+	case NameRuleContains:
+		return strings.Contains(strings.ToLower(modelName), strings.ToLower(pattern))
+	default:
+		return false
+	}
 }
 
 func GetAllModels(offset int, limit int) ([]*Model, error) {

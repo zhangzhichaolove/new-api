@@ -139,7 +139,7 @@ func updatePricing() {
 	// 将非精确规则模型匹配到 metaMap
 	for _, m := range prefixList {
 		for _, pricingModel := range enableAbilities {
-			if strings.HasPrefix(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(pricingModel.Model, m.ModelName, m.NameRule) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
@@ -148,7 +148,7 @@ func updatePricing() {
 	}
 	for _, m := range suffixList {
 		for _, pricingModel := range enableAbilities {
-			if strings.HasSuffix(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(pricingModel.Model, m.ModelName, m.NameRule) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
@@ -157,7 +157,7 @@ func updatePricing() {
 	}
 	for _, m := range containsList {
 		for _, pricingModel := range enableAbilities {
-			if strings.Contains(pricingModel.Model, m.ModelName) {
+			if MatchModelNameRule(pricingModel.Model, m.ModelName, m.NameRule) {
 				if _, exists := metaMap[pricingModel.Model]; !exists {
 					metaMap[pricingModel.Model] = m
 				}
