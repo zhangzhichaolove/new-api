@@ -5,6 +5,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -78,6 +79,8 @@ func CreateVendorMeta(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, &v)
 }
 
@@ -105,6 +108,8 @@ func UpdateVendorMeta(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, &v)
 }
 
@@ -120,5 +125,7 @@ func DeleteVendorMeta(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, nil)
 }

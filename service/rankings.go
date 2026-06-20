@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 )
 
@@ -163,6 +164,12 @@ func GetRankingsSnapshot(period string) (*RankingsResponse, error) {
 	return data, nil
 }
 
+func InvalidateRankingsCache() {
+	rankingCacheMu.Lock()
+	defer rankingCacheMu.Unlock()
+	rankingCache = map[string]rankingCacheItem{}
+}
+
 func rankingConfig(period string) (rankingPeriodConfig, error) {
 	switch period {
 	case "", "week":
@@ -198,7 +205,7 @@ func buildRankingsSnapshot(config rankingPeriodConfig, now time.Time) (*Rankings
 		}
 	}
 
-	meta := buildRankingModelMeta()
+	meta := buildRankingModelMeta(rankingModelNames(currentTotals, previousTotals))
 	totalTokens := sumRankingTokens(currentTotals)
 	previousRankByModel := rankingRankMap(previousTotals)
 	previousTokensByModel := rankingTokenMap(previousTotals)
@@ -233,7 +240,7 @@ func previousRankingTimeRange(config rankingPeriodConfig, currentStart int64) (i
 	return previousStart, previousEnd
 }
 
-func buildRankingModelMeta() map[string]rankingModelMeta {
+func buildRankingModelMeta(modelNames []string) map[string]rankingModelMeta {
 	vendorByID := make(map[int]model.PricingVendor)
 	for _, vendor := range model.GetVendors() {
 		vendorByID[vendor.ID] = vendor
@@ -250,7 +257,44 @@ func buildRankingModelMeta() map[string]rankingModelMeta {
 		}
 		meta[pricing.ModelName] = item
 	}
+
+	modelMetaByName, err := model.GetModelMetadataByNames(modelNames)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("GetModelMetadataByNames error: %v", err))
+		return meta
+	}
+	for modelName, modelMeta := range modelMetaByName {
+		if modelMeta == nil {
+			continue
+		}
+		vendor, ok := vendorByID[modelMeta.VendorID]
+		if !ok || vendor.Name == "" {
+			continue
+		}
+		meta[modelName] = rankingModelMeta{
+			vendor:     vendor.Name,
+			vendorIcon: vendor.Icon,
+		}
+	}
 	return meta
+}
+
+func rankingModelNames(totals ...[]model.RankingQuotaTotal) []string {
+	seen := make(map[string]struct{})
+	modelNames := make([]string, 0)
+	for _, rows := range totals {
+		for _, row := range rows {
+			if row.ModelName == "" {
+				continue
+			}
+			if _, ok := seen[row.ModelName]; ok {
+				continue
+			}
+			seen[row.ModelName] = struct{}{}
+			modelNames = append(modelNames, row.ModelName)
+		}
+	}
+	return modelNames
 }
 
 func modelMeta(modelName string, meta map[string]rankingModelMeta) rankingModelMeta {

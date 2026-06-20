@@ -8,6 +8,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -101,6 +102,7 @@ func CreateModelMeta(c *gin.Context) {
 		return
 	}
 	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, &m)
 }
 
@@ -140,6 +142,7 @@ func UpdateModelMeta(c *gin.Context) {
 		}
 	}
 	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, &m)
 }
 
@@ -156,6 +159,7 @@ func DeleteModelMeta(c *gin.Context) {
 		return
 	}
 	model.RefreshPricing()
+	service.InvalidateRankingsCache()
 	common.ApiSuccess(c, nil)
 }
 

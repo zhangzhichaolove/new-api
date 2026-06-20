@@ -104,6 +104,66 @@ func GetVendorModelCounts() (map[int64]int64, error) {
 	return m, nil
 }
 
+func GetModelMetadataByNames(modelNames []string) (map[string]*Model, error) {
+	modelNames = normalizeLookupValues(modelNames)
+	result := make(map[string]*Model, len(modelNames))
+	if len(modelNames) == 0 {
+		return result, nil
+	}
+
+	var allMeta []Model
+	if err := DB.Find(&allMeta).Error; err != nil {
+		return nil, err
+	}
+
+	prefixList := make([]*Model, 0)
+	suffixList := make([]*Model, 0)
+	containsList := make([]*Model, 0)
+	for i := range allMeta {
+		m := &allMeta[i]
+		if m.NameRule == NameRuleExact {
+			for _, modelName := range modelNames {
+				if modelName == m.ModelName {
+					result[modelName] = m
+				}
+			}
+			continue
+		}
+		switch m.NameRule {
+		case NameRulePrefix:
+			prefixList = append(prefixList, m)
+		case NameRuleSuffix:
+			suffixList = append(suffixList, m)
+		case NameRuleContains:
+			containsList = append(containsList, m)
+		}
+	}
+
+	for _, m := range prefixList {
+		for _, modelName := range modelNames {
+			if _, exists := result[modelName]; !exists && strings.HasPrefix(modelName, m.ModelName) {
+				result[modelName] = m
+			}
+		}
+	}
+	for _, m := range suffixList {
+		for _, modelName := range modelNames {
+			if _, exists := result[modelName]; !exists && strings.HasSuffix(modelName, m.ModelName) {
+				result[modelName] = m
+			}
+		}
+	}
+	for _, m := range containsList {
+		for _, modelName := range modelNames {
+			if _, exists := result[modelName]; !exists && strings.Contains(modelName, m.ModelName) {
+				result[modelName] = m
+			}
+		}
+	}
+
+	return result, nil
+}
+
 func GetAllModels(offset int, limit int) ([]*Model, error) {
 	var models []*Model
 	err := DB.Order("id DESC").Offset(offset).Limit(limit).Find(&models).Error
