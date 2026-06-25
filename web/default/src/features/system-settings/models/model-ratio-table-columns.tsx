@@ -16,14 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useState } from 'react'
-import { type ColumnDef } from '@tanstack/react-table'
-import { Pencil, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { DataTableColumnHeader } from '@/components/data-table'
+import type { ColumnDef } from '@tanstack/react-table'
+import { DataTableColumnHeader } from '@/components/data-table/core/column-header'
+import { StaticRowActions } from '@/components/data-table/static/static-row-actions'
 import { StatusBadge } from '@/components/status-badge'
-import { ConfirmDialog } from '@/components/confirm-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
+
 import {
   getModeLabel,
   getModeVariant,
@@ -46,48 +44,6 @@ type BuildModelRatioColumnsOptions = {
   onDelete: (name: string) => void
   onEdit: (model: ModelRow) => void
   t: Translate
-}
-
-function DeleteButton({
-  modelName,
-  onDelete,
-  t,
-}: {
-  modelName: string
-  onDelete: (name: string) => void
-  t: Translate
-}) {
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  return (
-    <>
-      <Button
-        variant='ghost'
-        size='sm'
-        onClick={(e) => {
-          e.stopPropagation()
-          setConfirmOpen(true)
-        }}
-      >
-        <Trash2 />
-      </Button>
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={t('Delete model pricing')}
-        desc={t(
-          'Are you sure you want to delete pricing for "{{name}}"? This action cannot be undone.',
-          { name: modelName }
-        )}
-        confirmText={t('Delete')}
-        destructive
-        handleConfirm={() => {
-          onDelete(modelName)
-          setConfirmOpen(false)
-        }}
-      />
-    </>
-  )
 }
 
 export function buildModelRatioColumns({
@@ -190,23 +146,13 @@ export function buildModelRatioColumns({
       id: 'actions',
       header: () => <div>{t('Actions')}</div>,
       cell: ({ row }) => (
-        <div className='flex justify-end gap-2'>
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit(row.original)
-            }}
-          >
-            <Pencil />
-          </Button>
-          <DeleteButton
-            modelName={row.original.name}
-            onDelete={onDelete}
-            t={t}
-          />
-        </div>
+        <StaticRowActions
+          editLabel={t('Edit')}
+          deleteLabel={t('Delete')}
+          menuLabel={t('Open menu')}
+          onEdit={() => onEdit(row.original)}
+          onDelete={() => onDelete(row.original.name)}
+        />
       ),
       enableHiding: false,
     },
