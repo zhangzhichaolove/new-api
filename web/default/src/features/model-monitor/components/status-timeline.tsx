@@ -41,16 +41,18 @@ export function StatusTimeline({ timeline }: StatusTimelineProps) {
         <span>{t('Now')}</span>
       </div>
       <div className="grid grid-cols-48 gap-0.5 h-8">
-        {timeline.map((slot, index) => (
-          <Tooltip key={index}>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  'h-full rounded-sm transition-colors cursor-pointer',
-                  getStatusColor(slot.status)
-                )}
-              />
-            </TooltipTrigger>
+        {timeline.map((slot) => (
+          <Tooltip key={`${slot.start_time}-${slot.end_time}`}>
+            <TooltipTrigger
+              render={
+                <div
+                  className={cn(
+                    'h-full cursor-pointer rounded-sm transition-colors',
+                    getStatusColor(slot.status)
+                  )}
+                />
+              }
+            />
             <TooltipContent>
               <div className="text-xs space-y-1">
                 <div className="font-medium">{formatTime(slot.start_time)}</div>

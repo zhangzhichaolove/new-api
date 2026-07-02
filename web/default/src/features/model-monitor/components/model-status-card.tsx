@@ -31,6 +31,14 @@ interface ModelStatusCardProps {
 
 export function ModelStatusCard({ data }: ModelStatusCardProps) {
   const { t } = useTranslation()
+  let statusLabel = 'No Data'
+  if (data.status === 'healthy') {
+    statusLabel = 'Healthy'
+  } else if (data.status === 'degraded') {
+    statusLabel = 'Degraded'
+  } else if (data.status === 'error') {
+    statusLabel = 'Error'
+  }
 
   return (
     <Card>
@@ -41,15 +49,7 @@ export function ModelStatusCard({ data }: ModelStatusCardProps) {
             <h3 className="font-semibold truncate">{data.model_name}</h3>
           </div>
           <Badge variant={getStatusBadgeVariant(data.status)}>
-            {t(
-              data.status === 'healthy'
-                ? 'Healthy'
-                : data.status === 'degraded'
-                  ? 'Degraded'
-                  : data.status === 'error'
-                    ? 'Error'
-                    : 'No Data'
-            )}
+            {t(statusLabel)}
           </Badge>
         </div>
       </CardHeader>

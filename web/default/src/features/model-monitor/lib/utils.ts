@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import type { MonitorStatus } from './types'
+import type { MonitorStatus } from '../types'
 
 export function getStatusColor(status: MonitorStatus): string {
   switch (status) {
@@ -36,12 +36,12 @@ export function getStatusColor(status: MonitorStatus): string {
 
 export function getStatusBadgeVariant(
   status: MonitorStatus
-): 'default' | 'success' | 'warning' | 'destructive' {
+): 'default' | 'secondary' | 'destructive' {
   switch (status) {
     case 'healthy':
-      return 'success'
+      return 'default'
     case 'degraded':
-      return 'warning'
+      return 'secondary'
     case 'error':
       return 'destructive'
     case 'no_data':

@@ -28,7 +28,7 @@ export type HeaderNavModulesConfig = {
   console: boolean
   pricing: HeaderNavAccessConfig
   rankings: HeaderNavAccessConfig
-  modelMonitor?: HeaderNavAccessConfig
+  modelMonitor: HeaderNavAccessConfig
   docs: boolean
   about: boolean
   [key: string]: boolean | HeaderNavAccessConfig
@@ -162,7 +162,7 @@ export function parseHeaderNavModules(
       ...base,
       pricing: { ...base.pricing },
       rankings: { ...base.rankings },
-      modelMonitor: base.modelMonitor ? { ...base.modelMonitor } : undefined,
+      modelMonitor: base.modelMonitor ? { ...base.modelMonitor } : { enabled: false, requireAuth: false, adminOnly: false, showAll: false },
     }
 
     Object.entries(parsed).forEach(([key, raw]) => {
