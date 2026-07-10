@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@tanstack/react-table'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -126,7 +126,10 @@ export function usePricingColumns(
           showRechargePrice,
           priceRate,
           usdExchangeRate,
-          groupRatioMultiplier: getDynamicDisplayGroupRatio(model),
+          groupRatioMultiplier: getDynamicDisplayGroupRatio(
+            model,
+            selectedGroup
+          ),
         })
 
         if (dynamicSummary) {
@@ -252,7 +255,10 @@ export function usePricingColumns(
           showRechargePrice,
           priceRate,
           usdExchangeRate,
-          groupRatioMultiplier: getDynamicDisplayGroupRatio(model),
+          groupRatioMultiplier: getDynamicDisplayGroupRatio(
+            model,
+            selectedGroup
+          ),
         })
 
         if (dynamicSummary) {

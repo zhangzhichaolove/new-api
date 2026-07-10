@@ -32,7 +32,7 @@ import {
   ModelCardGrid,
   ModelDetailsDrawer,
 } from './components'
-import { EXCLUDED_GROUPS, FILTER_ALL, VIEW_MODES } from './constants'
+import { EXCLUDED_GROUPS, VIEW_MODES } from './constants'
 import { useFilters } from './hooks/use-filters'
 import { usePricingData } from './hooks/use-pricing-data'
 
@@ -121,9 +121,6 @@ export function Pricing() {
       )
     }
 
-    const selectedGroup =
-      groupFilter !== FILTER_ALL ? groupFilter : undefined
-
     if (viewMode === VIEW_MODES.CARD) {
       return (
         <ModelCardGrid
@@ -133,7 +130,7 @@ export function Pricing() {
           usdExchangeRate={usdExchangeRate}
           tokenUnit={tokenUnit}
           showRechargePrice={showRechargePrice}
-          selectedGroup={selectedGroup}
+          selectedGroup={groupFilter}
         />
       )
     }
@@ -145,7 +142,7 @@ export function Pricing() {
         usdExchangeRate={usdExchangeRate}
         tokenUnit={tokenUnit}
         showRechargePrice={showRechargePrice}
-        selectedGroup={selectedGroup}
+        selectedGroup={groupFilter}
         onModelClick={handleModelClick}
       />
     )
