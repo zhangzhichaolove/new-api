@@ -28,37 +28,11 @@ build_frontends() {
     bun install --frozen-lockfile
   )
 
-  echo "Building default frontend..."
+  echo "Building frontend..."
   (
-    cd "${ROOT_DIR}/web/default"
+    cd "${ROOT_DIR}/web"
     DISABLE_ESLINT_PLUGIN=true VITE_REACT_APP_VERSION="${VERSION}" bun run build
   )
-
-  echo "Building classic frontend..."
-  ensure_classic_date_fns_alias
-  (
-    cd "${ROOT_DIR}/web/classic"
-    VITE_REACT_APP_VERSION="${VERSION}" bun run build
-  )
-}
-
-ensure_classic_date_fns_alias() {
-  local semi_foundation_dir=""
-  local date_fns_dir="${ROOT_DIR}/web/node_modules/@douyinfe/semi-foundation/node_modules/date-fns"
-
-  semi_foundation_dir="$(find "${ROOT_DIR}/web/node_modules/.bun" -path "*/node_modules/@douyinfe/semi-foundation" -type d -print -quit)"
-  if [[ ! -d "${date_fns_dir}" ]]; then
-    date_fns_dir="$(find "${ROOT_DIR}/web/node_modules/.bun" -path "*/date-fns@2*/node_modules/date-fns" -type d -print -quit)"
-  fi
-
-  if [[ -z "${semi_foundation_dir}" || ! -d "${date_fns_dir}" ]]; then
-    return
-  fi
-
-  mkdir -p "${semi_foundation_dir}/node_modules"
-  if [[ -L "${semi_foundation_dir}/node_modules/date-fns" || ! -e "${semi_foundation_dir}/node_modules/date-fns" ]]; then
-    ln -sfn "${date_fns_dir}" "${semi_foundation_dir}/node_modules/date-fns"
-  fi
 }
 
 build_backend() {
