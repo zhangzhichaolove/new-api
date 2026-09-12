@@ -2,12 +2,14 @@ package common
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestJsonRawMessageToString(t *testing.T) {
@@ -45,120 +47,190 @@ func TestJsonRawMessageToString(t *testing.T) {
 	}
 }
 
-// customMarshaler 用于验证底层 JSON 库仍会调用类型自定义的 MarshalJSON/UnmarshalJSON，
-// 不依赖 dto 包（避免 common <-> dto 循环引用）。
-type customMarshaler struct {
-	V int
-}
-
-func (c customMarshaler) MarshalJSON() ([]byte, error) {
-	return []byte(`"custom:` + strconv.Itoa(c.V) + `"`), nil
-}
-
-func (c *customMarshaler) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := Unmarshal(b, &s); err != nil {
-		return err
+func TestDecodeJsonWithValidation(t *testing.T) {
+	type request struct {
+		Code string `json:"code" binding:"required"`
 	}
-	n, err := strconv.Atoi(strings.TrimPrefix(s, "custom:"))
-	if err != nil {
-		return err
-	}
-	c.V = n
-	return nil
-}
-
-// TestMarshalStdCompatible 锁定与 encoding/json 字节级一致的关键契约：
-// map key 字典序排序（保护依赖 JSON 字节稳定的签名场景）与自定义 Marshaler 仍然生效。
-// （HTML 转义与标准库的字节一致性由 TestMarshalMatchesEncodingJSON 覆盖。）
-func TestMarshalStdCompatible(t *testing.T) {
-	tests := []struct {
-		name string
-		in   any
-		want string
+	for _, test := range []struct {
+		name, body      string
+		validationError bool
+		decodeError     bool
 	}{
-		{"map key 字典序排序", map[string]int{"b": 2, "a": 1, "c": 3}, `{"a":1,"b":2,"c":3}`},
-		{"嵌套 map 排序", map[string]any{"z": map[string]int{"y": 1, "x": 2}}, `{"z":{"x":2,"y":1}}`},
-		{"自定义 Marshaler 生效", customMarshaler{42}, `"custom:42"`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := Marshal(tt.in)
+		{name: "valid", body: `{"code":"123456"}`},
+		{name: "missing required field", body: `{}`, validationError: true},
+		{name: "empty required field", body: `{"code":""}`, validationError: true},
+		{name: "malformed JSON", body: `{"code":`, decodeError: true},
+		{name: "wrong field type", body: `{"code":123456}`, decodeError: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var value request
+			err := DecodeJsonWithValidation(strings.NewReader(test.body), &value)
+			if test.validationError {
+				var validationErrors validator.ValidationErrors
+				require.ErrorAs(t, err, &validationErrors)
+				require.Len(t, validationErrors, 1)
+				assert.Equal(t, "Code", validationErrors[0].Field())
+				assert.Equal(t, "required", validationErrors[0].Tag())
+				return
+			}
+			if test.decodeError {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, string(got))
+			assert.Equal(t, "123456", value.Code)
 		})
 	}
+	// Existing decoding callers opt into validation explicitly.
+	var unvalidated request
+	require.NoError(t, DecodeJson(strings.NewReader(`{}`), &unvalidated))
 }
 
-// TestMarshalMatchesEncodingJSON 对同一输入直接比对 common.Marshal 与标准库的输出字节，
-// 这是「升级底层库零回归」的核心保证。
-func TestMarshalMatchesEncodingJSON(t *testing.T) {
-	inputs := []any{
-		map[string]int{"b": 2, "a": 1},
-		map[string]string{"html": `<a href="x">&`},
-		[]any{1, "two", true, nil},
-		struct {
-			Name string   `json:"name"`
-			Tags []string `json:"tags"`
-		}{"foo", []string{"a", "b"}},
+// TestHostJSONCodecConformance runs through the codec injected by common's
+// init() and locks the encoding semantics the relay DTOs depend on. A future
+// engine swap in hostJSONCodec must keep every case here green.
+func TestHostJSONCodecConformance(t *testing.T) {
+	type embedded struct {
+		Content any `json:"content"`
 	}
-	for i, in := range inputs {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			std, err := json.Marshal(in)
-			require.NoError(t, err)
-			got, err := Marshal(in)
-			require.NoError(t, err)
-			assert.Equal(t, string(std), string(got))
-		})
+	type shadowed struct {
+		embedded
+		Content any `json:"content,omitempty"`
 	}
-}
+	type anyFields struct {
+		Nil  any `json:"nil,omitempty"`
+		Str  any `json:"str,omitempty"`
+		Int  any `json:"int,omitempty"`
+		Bool any `json:"bool,omitempty"`
+	}
+	type rawFields struct {
+		Obj    json.RawMessage `json:"obj"`
+		Arr    json.RawMessage `json:"arr"`
+		Nested json.RawMessage `json:"nested"`
+		Str    json.RawMessage `json:"str"`
+	}
+	type numberField struct {
+		N json.Number `json:"n"`
+	}
+	type pointerZeros struct {
+		Count   *int  `json:"count,omitempty"`
+		Enabled *bool `json:"enabled,omitempty"`
+	}
+	zero := 0
+	off := false
 
-// TestRoundTrip 验证 RawMessage、json.Number、自定义 Marshaler 与 UnmarshalJsonStr
-// 编解码后语义不变。
-func TestRoundTrip(t *testing.T) {
-	t.Run("RawMessage", func(t *testing.T) {
-		type wrap struct {
-			Raw json.RawMessage `json:"raw"`
+	t.Run("marshal", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			in   any
+			want string
+		}{
+			{
+				name: "shallowest field shadows embedded content and nil is omitted",
+				in:   shadowed{embedded: embedded{Content: "inner"}},
+				want: `{}`,
+			},
+			{
+				name: "shallowest field keeps empty string content",
+				in:   shadowed{embedded: embedded{Content: "inner"}, Content: ""},
+				want: `{"content":""}`,
+			},
+			{
+				name: "omitempty on any drops nil but keeps zero values",
+				in:   anyFields{Str: "", Int: 0, Bool: false},
+				want: `{"str":"","int":0,"bool":false}`,
+			},
+			{
+				name: "map keys are sorted",
+				in:   map[string]any{"z": 1, "a": 2, "m": 3},
+				want: `{"a":2,"m":3,"z":1}`,
+			},
+			{
+				name: "html characters are escaped",
+				in:   map[string]string{"s": `<a href="x">&</a>`},
+				want: `{"s":"\u003ca href=\"x\"\u003e\u0026\u003c/a\u003e"}`,
+			},
+			{
+				name: "explicit pointer zeros are kept",
+				in:   pointerZeros{Count: &zero, Enabled: &off},
+				want: `{"count":0,"enabled":false}`,
+			},
+			{
+				name: "nil pointers are omitted",
+				in:   pointerZeros{},
+				want: `{}`,
+			},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				encoded, err := Marshal(tt.in)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, string(encoded))
+			})
 		}
-		src := wrap{Raw: json.RawMessage(`{"k":1}`)}
-		b, err := Marshal(src)
+	})
+
+	t.Run("raw message passthrough", func(t *testing.T) {
+		input := `{"obj":{},"arr":[],"nested":{"k":[1,2]},"str":"x"}`
+		var value rawFields
+		require.NoError(t, UnmarshalJsonStr(input, &value))
+		assert.Equal(t, `{}`, string(value.Obj))
+		assert.Equal(t, `[]`, string(value.Arr))
+		assert.Equal(t, `{"k":[1,2]}`, string(value.Nested))
+		assert.Equal(t, `"x"`, string(value.Str))
+		encoded, err := Marshal(value)
 		require.NoError(t, err)
-		var dst wrap
-		require.NoError(t, Unmarshal(b, &dst))
-		assert.JSONEq(t, string(src.Raw), string(dst.Raw))
+		assert.Equal(t, input, string(encoded))
 	})
 
-	t.Run("json.Number", func(t *testing.T) {
-		type wrap struct {
-			N json.Number `json:"n"`
-		}
-		b, err := Marshal(wrap{N: "123.456"})
+	t.Run("json.Number keeps large integers exact", func(t *testing.T) {
+		input := `{"n":18446744073686646784}`
+		var value numberField
+		require.NoError(t, Unmarshal([]byte(input), &value))
+		assert.Equal(t, json.Number("18446744073686646784"), value.N)
+		encoded, err := Marshal(value)
 		require.NoError(t, err)
-		assert.Equal(t, `{"n":123.456}`, string(b))
-		var dst wrap
-		require.NoError(t, Unmarshal(b, &dst))
-		assert.Equal(t, json.Number("123.456"), dst.N)
+		assert.Equal(t, input, string(encoded))
 	})
 
-	t.Run("自定义 Marshaler", func(t *testing.T) {
-		b, err := Marshal(customMarshaler{7})
+	t.Run("explicit zeros survive unmarshal into pointers", func(t *testing.T) {
+		var value pointerZeros
+		require.NoError(t, Unmarshal([]byte(`{"count":0,"enabled":false}`), &value))
+		require.NotNil(t, value.Count)
+		require.NotNil(t, value.Enabled)
+		assert.Equal(t, 0, *value.Count)
+		assert.False(t, *value.Enabled)
+
+		var absent pointerZeros
+		require.NoError(t, Unmarshal([]byte(`{}`), &absent))
+		assert.Nil(t, absent.Count)
+		assert.Nil(t, absent.Enabled)
+	})
+
+	t.Run("relaykit DTO round trip", func(t *testing.T) {
+		raw := []byte(`{
+			"model":"kimi-k3",
+			"messages":[
+				{"role":"system","tools":[{"type":"function","function":{"name":"get_current_time","description":"Get the current time of a city","parameters":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}}}]},
+				{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"get_current_time","arguments":"{\"city\":\"Beijing\"}"}}]}
+			]
+		}`)
+		var req dto.GeneralOpenAIRequest
+		require.NoError(t, Unmarshal(raw, &req))
+		encoded, err := Marshal(req)
 		require.NoError(t, err)
-		var c customMarshaler
-		require.NoError(t, Unmarshal(b, &c))
-		assert.Equal(t, 7, c.V)
-	})
 
-	t.Run("UnmarshalJsonStr", func(t *testing.T) {
-		var m map[string]int
-		require.NoError(t, UnmarshalJsonStr(`{"a":1,"b":2}`, &m))
-		assert.Equal(t, map[string]int{"a": 1, "b": 2}, m)
-	})
-}
+		messages := gjson.GetBytes(encoded, "messages").Array()
+		require.Len(t, messages, 2)
 
-// TestValidJson 覆盖新增的 ValidJson 封装。
-func TestValidJson(t *testing.T) {
-	assert.True(t, ValidJson([]byte(`{"a":1}`)))
-	assert.True(t, ValidJson([]byte(`[1,2,3]`)))
-	assert.False(t, ValidJson([]byte(`{"a":}`)))
-	assert.False(t, ValidJson([]byte(`not json`)))
+		// Kimi K3 dynamic tool loading: tools survive and no content key is emitted.
+		assert.Equal(t, "system", messages[0].Get("role").String())
+		assert.JSONEq(t, gjson.GetBytes(raw, "messages.0.tools").Raw, messages[0].Get("tools").Raw)
+		assert.False(t, messages[0].Get("content").Exists())
+
+		// Assistant tool-call replay still carries an explicit "content": null.
+		assistantContent := messages[1].Get("content")
+		assert.True(t, assistantContent.Exists())
+		assert.Equal(t, gjson.Null, assistantContent.Type)
+		assert.JSONEq(t, gjson.GetBytes(raw, "messages.1.tool_calls").Raw, messages[1].Get("tool_calls").Raw)
+	})
 }

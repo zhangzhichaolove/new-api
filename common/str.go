@@ -2,11 +2,14 @@ package common
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
+	"slices"
 	"strconv"
 	"strings"
 	"unsafe"
+
+	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
 
 	"github.com/samber/lo"
 )
@@ -35,16 +38,16 @@ func GetRandomString(length int) string {
 	return lo.RandomString(length, lo.AlphanumericCharset)
 }
 
-func MapToJsonStr(m map[string]interface{}) string {
-	bytes, err := Marshal(m)
+func MapToJsonStr(m map[string]any) string {
+	bytes, err := json.Marshal(m)
 	if err != nil {
 		return ""
 	}
 	return string(bytes)
 }
 
-func StrToMap(str string) (map[string]interface{}, error) {
-	m := make(map[string]interface{})
+func StrToMap(str string) (map[string]any, error) {
+	m := make(map[string]any)
 	err := Unmarshal([]byte(str), &m)
 	if err != nil {
 		return nil, err
@@ -52,9 +55,9 @@ func StrToMap(str string) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func StrToJsonArray(str string) ([]interface{}, error) {
-	var js []interface{}
-	err := Unmarshal([]byte(str), &js)
+func StrToJsonArray(str string) ([]any, error) {
+	var js []any
+	err := json.Unmarshal([]byte(str), &js)
 	if err != nil {
 		return nil, err
 	}
@@ -62,13 +65,13 @@ func StrToJsonArray(str string) ([]interface{}, error) {
 }
 
 func IsJsonArray(str string) bool {
-	var js []interface{}
-	return Unmarshal([]byte(str), &js) == nil
+	var js []any
+	return json.Unmarshal([]byte(str), &js) == nil
 }
 
 func IsJsonObject(str string) bool {
-	var js map[string]interface{}
-	return Unmarshal([]byte(str), &js) == nil
+	var js map[string]any
+	return json.Unmarshal([]byte(str), &js) == nil
 }
 
 func String2Int(str string) int {
@@ -80,12 +83,7 @@ func String2Int(str string) int {
 }
 
 func StringsContains(strs []string, str string) bool {
-	for _, s := range strs {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(strs, str)
 }
 
 // StringToByteSlice []byte only read, panic on append
@@ -125,14 +123,14 @@ func MaskEmail(email string) string {
 	}
 
 	// Find the @ symbol
-	atIndex := strings.Index(email, "@")
-	if atIndex == -1 {
+	_, after, ok := strings.Cut(email, "@")
+	if !ok {
 		// No @ symbol found, return masked
 		return "***masked***"
 	}
 
 	// Return only the domain part with @ symbol
-	return "***@" + email[atIndex+1:]
+	return "***@" + after
 }
 
 // MaskSensitiveInfo moved to the conversion kit (kitutil) because the types

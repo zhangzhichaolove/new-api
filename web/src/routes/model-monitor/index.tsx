@@ -19,12 +19,15 @@ For commercial licensing, please contact support@quantumnous.com
 
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
-import { getFreshModuleAccess } from '@/lib/nav-modules'
+import { getModuleAccessForGuard } from '@/lib/nav-modules'
 import { ModelMonitor } from '@/features/model-monitor'
 
 export const Route = createFileRoute('/model-monitor/')({
-  beforeLoad: async ({ location }) => {
-    const access = await getFreshModuleAccess('modelMonitor')
+  beforeLoad: async ({ context, location }) => {
+    const access = await getModuleAccessForGuard(
+      context.queryClient,
+      'modelMonitor'
+    )
     if (!access.enabled) {
       throw redirect({ to: '/' })
     }
