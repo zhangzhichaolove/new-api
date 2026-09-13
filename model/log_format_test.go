@@ -242,3 +242,47 @@ func TestLogFormattingPreservesLargeIntegerLexemes(t *testing.T) {
 		assert.Equal(t, unprivileged, adminLogs[0].Other)
 	})
 }
+
+func TestLogModelMappingVisibility(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		other string
+	}{
+		{"mapped", `{"is_model_mapped":true,"upstream_model_name":"private-upstream","model_price":1.25}`},
+		{"without mapping flag", `{"upstream_model_name":"private-upstream","model_price":1.25}`},
+		{"unmapped", `{"is_model_mapped":false,"model_price":1.25}`},
+		{"without mapping fields", `{"model_price":1.25}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, role := range []string{"user", "admin", "root"} {
+				t.Run(role, func(t *testing.T) {
+					const requestModel = "public-model"
+					logs := []*Log{{ModelName: requestModel, Other: tc.other}}
+					switch role {
+					case "user":
+						formatUserLogs(logs, 0)
+					case "admin":
+						FormatAdminLogs(logs)
+					case "root":
+						FormatRootLogs(logs)
+					}
+					assert.Equal(t, requestModel, logs[0].ModelName)
+					parsed, err := common.StrToMap(logs[0].Other)
+					require.NoError(t, err)
+					assert.Equal(t, 1.25, parsed["model_price"])
+					if role != "user" {
+						assert.JSONEq(t, tc.other, logs[0].Other)
+						return
+					}
+					assert.NotContains(t, logs[0].Other, "private-upstream")
+					if actual, exists := parsed["upstream_model_name"]; exists {
+						assert.Equal(t, requestModel, actual)
+					}
+					if mapped, exists := parsed["is_model_mapped"]; exists {
+						assert.Equal(t, false, mapped)
+					}
+				})
+			}
+		})
+	}
+}

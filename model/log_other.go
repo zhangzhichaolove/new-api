@@ -212,7 +212,7 @@ func normalizeLegacyRejectReason(values map[string]json.RawMessage) bool {
 // formatLogOtherJSON applies the role projection while keeping untouched JSON
 // values as RawMessage. This preserves integers larger than JavaScript's safe
 // range instead of round-tripping them through float64.
-func formatLogOtherJSON(value string, visibility logOtherVisibility) string {
+func formatLogOtherJSON(value string, visibility logOtherVisibility, requestModel string) string {
 	if value == "" {
 		return ""
 	}
@@ -227,6 +227,20 @@ func formatLogOtherJSON(value string, visibility logOtherVisibility) string {
 
 	changed := false
 	if visibility == logOtherVisibilityUser {
+		// Self/token log APIs must not expose upstream routing, including in
+		// historical logs. Present the request model as the actual model instead.
+		if _, exists := values["upstream_model_name"]; exists {
+			encodedModel, err := common.Marshal(requestModel)
+			if err != nil {
+				return "{}"
+			}
+			values["upstream_model_name"] = encodedModel
+			changed = true
+		}
+		if _, exists := values["is_model_mapped"]; exists {
+			values["is_model_mapped"] = json.RawMessage("false")
+			changed = true
+		}
 		for _, key := range []string{logOtherAdminInfoKey, logOtherRootInfoKey, logOtherAuditInfoKey} {
 			if _, exists := values[key]; exists {
 				delete(values, key)
