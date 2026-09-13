@@ -27,7 +27,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { useSystemConfig } from '@/hooks/use-system-config'
 import { handleServerError } from '@/lib/handle-server-error'
 import { ROLE } from '@/lib/roles'
 import { useAuthStore } from '@/stores/auth-store'
@@ -57,7 +56,6 @@ interface NotificationTabProps {
 export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
   const { t } = useTranslation()
   const isAdmin = (profile?.role ?? 0) >= ROLE.ADMIN
-  const { forceRecordIpLogEnabled } = useSystemConfig()
   const currentUser = useAuthStore((state) => state.auth.user)
   const setUser = useAuthStore((state) => state.auth.setUser)
   const [loading, setLoading] = useState(false)
@@ -352,27 +350,6 @@ export function NotificationTab({ profile, onUpdate }: NotificationTabProps) {
             onCheckedChange={(checked) =>
               updateField('accept_unset_model_ratio_model', checked)
             }
-          />
-        </div>
-
-        {/* Record IP Log */}
-        <div className='flex items-start justify-between gap-3 rounded-lg border p-3 sm:items-center sm:p-4'>
-          <div className='space-y-0.5'>
-            <Label htmlFor='recordIp'>{t('Record IP Address')}</Label>
-            <p className='text-muted-foreground text-xs sm:text-sm'>
-              {forceRecordIpLogEnabled
-                ? t(
-                    'IP logging is enforced by the site administrator and cannot be turned off'
-                  )
-                : t('Log IP address for usage and error logs')}
-            </p>
-          </div>
-          <Switch
-            id='recordIp'
-            className='shrink-0'
-            checked={forceRecordIpLogEnabled || settings.record_ip_log}
-            disabled={forceRecordIpLogEnabled}
-            onCheckedChange={(checked) => updateField('record_ip_log', checked)}
           />
         </div>
       </div>

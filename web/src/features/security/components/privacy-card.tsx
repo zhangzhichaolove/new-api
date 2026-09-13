@@ -68,13 +68,7 @@ export function PrivacyCard(props: PrivacyCardProps) {
   return (
     <TitledCard
       title={t('Record IP Address')}
-      description={
-        forceRecordIpLogEnabled
-          ? t(
-              'IP logging is enforced by the site administrator and cannot be turned off'
-            )
-          : t('Log IP address for usage and error logs')
-      }
+      description={t('Log IP address for usage and error logs')}
       disableHoverEffect
     >
       <div className='flex items-center justify-between gap-4'>
