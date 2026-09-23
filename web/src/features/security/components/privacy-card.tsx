@@ -68,7 +68,13 @@ export function PrivacyCard(props: PrivacyCardProps) {
   return (
     <TitledCard
       title={t('Record IP Address')}
-      description={t('Log IP address for usage and error logs')}
+      description={
+        forceRecordIpLogEnabled
+          ? t(
+              'IP logging is enforced by the site administrator and cannot be turned off'
+            )
+          : t('Log IP address for usage and error logs')
+      }
       disableHoverEffect
     >
       <div className='flex items-center justify-between gap-4'>
@@ -84,7 +90,7 @@ export function PrivacyCard(props: PrivacyCardProps) {
         <Button
           type='button'
           onClick={() => save.mutate()}
-          disabled={save.isPending}
+          disabled={forceRecordIpLogEnabled || save.isPending}
         >
           {save.isPending && <Loader2 className='size-4 animate-spin' />}
           {save.isPending ? t('Saving...') : t('Save Settings')}
