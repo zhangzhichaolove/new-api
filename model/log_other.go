@@ -227,6 +227,12 @@ func formatLogOtherJSON(value string, visibility logOtherVisibility, requestMode
 
 	changed := false
 	if visibility == logOtherVisibilityUser {
+		// Upstream response observations include both routed and returned model
+		// names. Strip the whole diagnostic for self/token views, including old logs.
+		if _, exists := values["response_model"]; exists {
+			delete(values, "response_model")
+			changed = true
+		}
 		// Self/token log APIs must not expose upstream routing, including in
 		// historical logs. Present the request model as the actual model instead.
 		if _, exists := values["upstream_model_name"]; exists {
