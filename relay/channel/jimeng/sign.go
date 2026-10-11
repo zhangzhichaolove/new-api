@@ -14,10 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/gin-gonic/gin"
 )
 
 // SignRequestForJimeng 对即梦 API 请求进行签名，支持 http.Request 或 header+url+body 方式
@@ -46,7 +45,7 @@ func SetPayloadHash(c *gin.Context, req any) error {
 	if err != nil {
 		return err
 	}
-	logger.LogInfo(c, fmt.Sprintf("SetPayloadHash body: %s", body))
+	logger.LogInfo(c, common.LogText("SetPayloadHash body: %s", body))
 	payloadHash := sha256.Sum256(body)
 	hexPayloadHash := hex.EncodeToString(payloadHash[:])
 	c.Set(HexPayloadHashKey, hexPayloadHash)
