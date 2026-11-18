@@ -268,7 +268,7 @@ bun run dev -- --port 5173
 | [開発ドキュメント](./docs/development/DEVELOPMENT.ja.md) | ローカル開発と拡張の詳細ガイド |
 | [electron/](./electron/README.md) | デスクトップアプリのラッパーとパッケージング |
 
-貢献前に [AGENTS.md](./AGENTS.md) を確認してください。変更に応じて、Go モジュールは `make test`、フロントエンドは `web/` で `bun run typecheck`、`bun run lint`、`bun run test`、`bun run build` を実行します。RelayKit を変更した場合は、`relaykit/` で `GOWORK=off go build ./...` も実行してください。
+貢献前に [AGENTS.md](./AGENTS.md) を確認してください。変更に応じて、Go モジュールは `make test`、フロントエンドは `web/` で `bun check -b`、`bun run lint`、`bun run test`、`bun run build` を実行します。RelayKit を変更した場合は、`relaykit/` で `GOWORK=off go build ./...` も実行してください。
 
 <a id="documentation"></a>
 

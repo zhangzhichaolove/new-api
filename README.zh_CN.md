@@ -283,7 +283,7 @@ bun run dev -- --port 5173
 | [开发文档](./docs/development/DEVELOPMENT.zh_CN.md) | 本地开发与扩展的详细指南 |
 | [electron/](./electron/README.md) | 桌面封装与打包 |
 
-贡献前请阅读 [AGENTS.md](./AGENTS.md)。按改动范围执行检查：Go 模块使用 `make test`；前端在 `web/` 下运行 `bun run typecheck`、`bun run lint`、`bun run test` 和 `bun run build`。修改 RelayKit 后还必须在 `relaykit/` 下执行 `GOWORK=off go build ./...`。
+贡献前请阅读 [AGENTS.md](./AGENTS.md)。按改动范围执行检查：Go 模块使用 `make test`；前端在 `web/` 下运行 `bun check -b`、`bun run lint`、`bun run test` 和 `bun run build`。修改 RelayKit 后还必须在 `relaykit/` 下执行 `GOWORK=off go build ./...`。
 
 <a id="documentation"></a>
 

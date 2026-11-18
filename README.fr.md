@@ -268,7 +268,7 @@ Ouvrez [http://localhost:5173](http://localhost:5173) ; les requêtes API sont r
 | [Documentation de développement](./docs/development/DEVELOPMENT.fr.md) | Guide détaillé du développement local et des extensions |
 | [electron/](./electron/README.md) | Application de bureau et packaging |
 
-Lisez [AGENTS.md](./AGENTS.md) avant de contribuer. Exécutez les vérifications adaptées : `make test` pour les modules Go ; `bun run typecheck`, `bun run lint`, `bun run test` et `bun run build` dans `web/` pour le frontend. Une modification de RelayKit nécessite aussi `GOWORK=off go build ./...` depuis `relaykit/`.
+Lisez [AGENTS.md](./AGENTS.md) avant de contribuer. Exécutez les vérifications adaptées : `make test` pour les modules Go ; `bun check -b`, `bun run lint`, `bun run test` et `bun run build` dans `web/` pour le frontend. Une modification de RelayKit nécessite aussi `GOWORK=off go build ./...` depuis `relaykit/`.
 
 <a id="documentation"></a>
 

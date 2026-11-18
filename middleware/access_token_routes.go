@@ -58,6 +58,15 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/verify/methods":             accessTokenAnyRule,
 	"POST /api/verify":                    accessTokenAnyRule,
 
+	// router/api-router.go: /api/monitor (stats follows the navigation policy;
+	// management routes additionally require AdminAuth).
+	"GET /api/monitor/stats":                     accessTokenAnyRule,
+	"GET /api/monitor/models":                    accessTokenScopeRule("model:read"),
+	"GET /api/monitor/available-models":          accessTokenScopeRule("model:read"),
+	"POST /api/monitor/models":                   accessTokenScopeRule("model:write"),
+	"DELETE /api/monitor/models/:model_name":     accessTokenScopeRule("model:write"),
+	"PUT /api/monitor/models/:model_name/toggle": accessTokenScopeRule("model:write"),
+
 	// router/api-router.go: /api/user (self)
 	"GET /api/user/sessions":                       accessTokenSessionRule,
 	"DELETE /api/user/sessions/:sid":               accessTokenSessionRule,
@@ -150,6 +159,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"PUT /api/option/":                                           accessTokenScopeRule("option:write"),
 	"PUT /api/option/passkey/domains":                            accessTokenScopeRule("option:write"),
 	"GET /api/option/model_pricing":                              accessTokenScopeRule("option:read"),
+	"GET /api/option/model_pricing/issues":                       accessTokenScopeRule("option:read"),
 	"PATCH /api/option/model_pricing":                            accessTokenScopeRule("option:write"),
 	"POST /api/option/model_pricing/convert":                     accessTokenScopeRule("option:read"),
 	"POST /api/option/model_pricing/preview":                     accessTokenScopeRule("option:read"),
@@ -186,6 +196,7 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/system-task/current":                 accessTokenScopeRule("ops:read"),
 	"GET /api/system-task/:task_id":                accessTokenScopeRule("ops:read"),
 	"GET /api/system-info/instances":               accessTokenScopeRule("ops:read"),
+	"GET /api/system-info/sync":                    accessTokenScopeRule("ops:read"),
 	"DELETE /api/system-info/stale-instances":      accessTokenScopeRule("ops:write"),
 	"DELETE /api/system-info/instances/:node_name": accessTokenScopeRule("ops:write"),
 
@@ -203,6 +214,9 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"POST /api/plugin/task/:key/status":              accessTokenScopeRule("plugin:write"),
 	"POST /api/plugin/task/:key/dryrun":              accessTokenScopeRule("plugin:write"),
 	"DELETE /api/plugin/task/:key/versions/:version": accessTokenScopeRule("plugin:write"),
+	// router/api-router.go: /api/request_plugin
+	"PUT /api/request_plugin/instances": accessTokenScopeRule("plugin:write"),
+	"POST /api/request_plugin/dry_run":  accessTokenScopeRule("plugin:write"),
 
 	// router/channel-router.go: the key route is RootAuth, not Casbin-guarded.
 	"POST /api/channel/:id/key": accessTokenScopeRule(service.AccessTokenScopeOf(authz.ChannelSecretView)),
@@ -241,6 +255,8 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
 	"GET /api/log/search":                       accessTokenScopeRule("log:read"),
 	"GET /api/log/self":                         accessTokenScopeRule("usage:read"),
 	"GET /api/log/self/search":                  accessTokenScopeRule("usage:read"),
+	"GET /api/log/export":                       accessTokenScopeRule("log:read"),
+	"GET /api/log/self/export":                  accessTokenScopeRule("usage:read"),
 	"GET /api/data/":                            accessTokenScopeRule("log:read"),
 	"GET /api/data/users":                       accessTokenScopeRule("log:read"),
 	"GET /api/data/self":                        accessTokenScopeRule("usage:read"),

@@ -109,6 +109,12 @@ describe('shared status query deduplication', () => {
         HeaderNavModules: {
           pricing: { enabled: true, requireAuth: true },
           rankings: { enabled: true, requireAuth: false },
+          modelMonitor: {
+            enabled: true,
+            requireAuth: true,
+            adminOnly: true,
+            showAll: true,
+          },
         },
       }
       let resolveStatus!: (value: { data: unknown }) => void
@@ -123,6 +129,7 @@ describe('shared status query deduplication', () => {
       const guards = Promise.all([
         getModuleAccessForGuard(queryClient, 'pricing'),
         getModuleAccessForGuard(queryClient, 'rankings'),
+        getModuleAccessForGuard(queryClient, 'modelMonitor'),
       ]).then((result) => {
         guardsResolved = true
         return result
@@ -134,8 +141,24 @@ describe('shared status query deduplication', () => {
       expect(guardsResolved).toBe(false)
       resolveStatus({ data: { success: true, data: status } })
       expect(await guards).toEqual([
-        { enabled: true, requireAuth: true },
-        { enabled: true, requireAuth: false },
+        {
+          enabled: true,
+          requireAuth: true,
+          adminOnly: false,
+          showAll: false,
+        },
+        {
+          enabled: true,
+          requireAuth: false,
+          adminOnly: false,
+          showAll: false,
+        },
+        {
+          enabled: true,
+          requireAuth: true,
+          adminOnly: true,
+          showAll: true,
+        },
       ])
       await waitFor(() =>
         expect(hook.result.current.status?.system_name).toBe('shared')
@@ -202,6 +225,36 @@ describe('module guard status freshness', () => {
       before: { enabled: true, requireAuth: true },
       after: { enabled: true, requireAuth: false },
     },
+    {
+      module: 'modelMonitor',
+      before: {
+        enabled: true,
+        requireAuth: false,
+        adminOnly: false,
+        showAll: true,
+      },
+      after: {
+        enabled: true,
+        requireAuth: false,
+        adminOnly: true,
+        showAll: false,
+      },
+    },
+    {
+      module: 'modelMonitor',
+      before: {
+        enabled: true,
+        requireAuth: false,
+        adminOnly: true,
+        showAll: false,
+      },
+      after: {
+        enabled: true,
+        requireAuth: false,
+        adminOnly: false,
+        showAll: true,
+      },
+    },
   ])('uses refreshed $module access: $before -> $after', async (scenario) => {
     const queryClient = createQueryClient()
     queryClient.setQueryData(
@@ -220,7 +273,7 @@ describe('module guard status freshness', () => {
         queryClient,
         scenario.module as HeaderNavModule
       )
-    ).toEqual(scenario.after)
+    ).toEqual({ adminOnly: false, showAll: false, ...scenario.after })
   })
 
   test('reuses fresh access but refreshes explicitly invalidated access', async () => {
@@ -242,21 +295,35 @@ describe('module guard status freshness', () => {
     expect(statusRequests).toHaveLength(1)
   })
 
-  test.each(['cold', 'stale'] as const)(
-    'fails closed when a %s cache request fails',
-    async (cacheState) => {
+  test.each([
+    { cacheState: 'cold', module: 'pricing' },
+    { cacheState: 'stale', module: 'pricing' },
+    { cacheState: 'cold', module: 'modelMonitor' },
+    { cacheState: 'stale', module: 'modelMonitor' },
+  ] as const)(
+    'fails closed for $module when a $cacheState cache request fails',
+    async ({ cacheState, module }) => {
       const queryClient = createQueryClient()
       if (cacheState === 'stale') {
         queryClient.setQueryData(
           STATUS_QUERY_KEY,
-          { HeaderNavModules: { pricing: true } },
+          {
+            HeaderNavModules: {
+              [module]: {
+                enabled: true,
+                requireAuth: false,
+                adminOnly: false,
+                showAll: true,
+              },
+            },
+          },
           { updatedAt: Date.now() - 600_000 }
         )
       }
       apiClient.get = async () => {
         throw new Error('Status unavailable')
       }
-      expect(await getModuleAccessForGuard(queryClient, 'pricing')).toEqual({
+      expect(await getModuleAccessForGuard(queryClient, module)).toEqual({
         enabled: false,
         requireAuth: true,
       })

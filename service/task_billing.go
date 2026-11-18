@@ -78,6 +78,10 @@ func LogTaskConsumption(c *gin.Context, info *relaycommon.RelayInfo, task *model
 	}
 	appendTaskLogInfo(task, other)
 	attachQuotaSaturation(c, info, other)
+	if len(info.RequestPluginSteps) > 0 {
+		other.SetAdmin("request_plugins", info.RequestPluginSteps)
+	}
+	appendRequestPluginRecord(info, other)
 	model.RecordConsumeLog(c, info.UserId, model.RecordConsumeLogParams{
 		ChannelId: info.ChannelId,
 		ModelName: info.OriginModelName,
@@ -147,6 +151,8 @@ func taskAdjustTokenQuota(ctx context.Context, task *model.Task, delta int) {
 // taskBillingOther 从 task 的 BillingContext 构建日志 Other 字段。
 func taskBillingOther(task *model.Task) *model.LogOther {
 	other := model.NewLogOther()
+	// 前端列表按 is_task 选择任务档位渲染分支,缺失会把差额/退款日志误判成普通 relay 动态计费
+	other.SetPublic("is_task", true)
 	if bc := task.PrivateData.BillingContext; bc != nil {
 		other.SetPublic("model_price", bc.ModelPrice)
 		if bc.ModelRatio > 0 {
